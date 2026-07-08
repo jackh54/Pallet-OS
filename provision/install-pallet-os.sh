@@ -115,7 +115,15 @@ EOF
 mkdir -p /etc/pallet /var/lib/pallet
 chmod 700 /etc/pallet
 
-if [[ -n "$PALLET_SERVER_URL" ]]; then
+if [[ -f /etc/pallet/agent.json ]]; then
+  if [[ -n "$PALLET_SERVER_URL" ]]; then
+    echo "==> Updating server URL in existing agent config (keeping enrollment)"
+    tmp="$(mktemp)"
+    jq --arg url "$PALLET_SERVER_URL" '.server_url = $url' /etc/pallet/agent.json >"$tmp"
+    install -m 0600 "$tmp" /etc/pallet/agent.json
+    rm -f "$tmp"
+  fi
+elif [[ -n "$PALLET_SERVER_URL" ]]; then
   cat > /etc/pallet/agent.json <<EOF
 {
   "server_url": "$PALLET_SERVER_URL",
@@ -177,9 +185,22 @@ systemctl daemon-reload
 systemctl enable pallet-agent
 systemctl disable pallet-shell 2>/dev/null || true
 
+is_enrolled() {
+  [[ -f /etc/pallet/agent.json ]] && \
+    jq -e '.device_id != "" and .device_token != ""' /etc/pallet/agent.json >/dev/null 2>&1
+}
+
 if [[ -n "$PALLET_ENROLLMENT_TOKEN" && -n "$PALLET_SERVER_URL" ]]; then
-  echo "==> Enrolling device"
-  pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" -enroll-only -config /etc/pallet/agent.json
+  if is_enrolled; then
+    echo "==> Device already enrolled — skipping re-enrollment"
+    systemctl enable --now pallet-agent || true
+  else
+    echo "==> Enrolling device"
+    pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" -enroll-only -config /etc/pallet/agent.json
+    systemctl enable --now pallet-agent || true
+  fi
+elif is_enrolled; then
+  echo "==> Device already enrolled — restarting agent"
   systemctl enable --now pallet-agent || true
 else
   echo ""
