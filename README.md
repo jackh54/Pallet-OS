@@ -112,12 +112,29 @@ curl -X POST "$API/api/v1/admin/enrollment-tokens" \
 
 ## 3. Build Chromebook USB image
 
+### Download from GitHub (recommended)
+
+CI builds the image on every version tag (`v*`) and publishes to **GitHub Releases**:
+
+1. Go to **Releases** → download `pallet-os-chromebook.img.zst`
+2. Verify: `sha256sum -c pallet-os-chromebook.img.zst.sha256`
+3. Decompress: `zstd -d pallet-os-chromebook.img.zst`
+4. Flash with **[Balena Etcher](https://etcher.balena.io/)** → select `pallet-os-chromebook.img`
+
+To trigger a build manually: **Actions** → **Build Chromebook USB image** → **Run workflow**.  
+Tag a release to publish: `git tag v1.0.0 && git push origin v1.0.0`
+
+> **Chromebook Recovery Utility:** does **not** work on stock firmware (ChromeOS images only).  
+> With **MrChromebox UEFI**, use **Balena Etcher** — not the Recovery Utility.
+
+### Build locally
+
 ```bash
 sudo ./provision/build-chromebook-image.sh
+# or skip compression for local dd:
+sudo PALLET_COMPRESS=0 ./provision/build-chromebook-image.sh
 sudo dd if=build/pallet-os-chromebook.img of=/dev/sdX bs=4M status=progress && sync
 ```
-
-Boot the Chromebook from USB → first boot provisions Pallet OS → reboot into shelf desktop.
 
 ## Policy & commands
 

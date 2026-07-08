@@ -11,10 +11,10 @@ On real Chromebook hardware, the supported path is:
 3. **Boot from USB** using a Pallet OS image built by `provision/build-chromebook-image.sh`.
 4. Complete first-boot provisioning (or pass enrollment env vars).
 
-Some Recovery Utility versions support **"Use local image"** for custom `.bin` images. Our build script produces a standard **UEFI USB image** (`pallet-os-chromebook.img`). You can:
+Some Recovery Utility versions support **"Use local image"** — but only after **MrChromebox UEFI** firmware, and results vary. **Balena Etcher is strongly recommended.**
 
-- Write with `dd` / Rufus / Balena Etcher (recommended), **or**
-- Use Recovery Utility local image if your version supports `.img`/converted `.bin`.
+- ✅ **Balena Etcher** — flash `pallet-os-chromebook.img` (from GitHub Releases)
+- ❌ **Chromebook Recovery Utility on stock firmware** — will not work (ChromeOS images only)
 
 ### Why MrChromebox?
 
