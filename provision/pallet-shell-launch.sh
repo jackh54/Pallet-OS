@@ -17,6 +17,9 @@ export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
 export MOZ_ENABLE_WAYLAND=1
 export GDK_BACKEND=wayland
 
+# shellcheck disable=SC1091
+source /usr/local/bin/pallet-graphics-env 2>/dev/null || true
+
 log() {
   echo "$(date -Is) [desktop] $*" >>"$LOG"
 }
@@ -70,11 +73,16 @@ ensure_shell() {
 launch_epiphany() {
   local profile="${HOME:-/home/pallet}/.config/pallet-epiphany"
   local bin
+  local -a flags=()
   mkdir -p "$profile"
+  if [[ -n "${PALLET_SOFTWARE_RENDERING:-}" ]]; then
+    flags+=(--disable-gpu --disable-gpu-compositing)
+    export WEBKIT_DISABLE_COMPOSITING_MODE=1
+  fi
   for bin in epiphany epiphany-browser; do
     if command -v "$bin" >/dev/null 2>&1; then
-      log "trying $bin"
-      "$bin" --application-mode --profile="$profile" "$URL"
+      log "trying $bin (software=${PALLET_SOFTWARE_RENDERING:-0})"
+      "$bin" --application-mode --profile="$profile" "${flags[@]}" "$URL"
       return $?
     fi
   done
@@ -82,12 +90,12 @@ launch_epiphany() {
 }
 
 launch_firefox() {
-  log "trying firefox"
-  MOZ_ENABLE_WAYLAND=1 firefox \
-    --kiosk \
-    --private-window \
-    --setDefaultBrowser=false \
-    "$URL"
+  log "trying firefox (software=${PALLET_SOFTWARE_RENDERING:-0})"
+  local -a flags=(--kiosk --private-window --setDefaultBrowser=false)
+  if [[ -n "${PALLET_SOFTWARE_RENDERING:-}" ]]; then
+    flags+=(--disable-gpu)
+  fi
+  MOZ_ENABLE_WAYLAND=1 firefox "${flags[@]}" "$URL"
 }
 
 launch_chromium() {
@@ -106,6 +114,9 @@ launch_chromium() {
     --no-sandbox
     --disable-gpu-sandbox
   )
+  if [[ -n "${PALLET_SOFTWARE_RENDERING:-}" ]]; then
+    flags+=(--disable-gpu --disable-gpu-compositing --use-gl=swiftshader)
+  fi
 
   for bin in /usr/bin/chromium /usr/bin/chromium-browser /snap/bin/chromium; do
     if [[ -x "$bin" ]]; then
