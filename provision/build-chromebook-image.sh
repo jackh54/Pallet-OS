@@ -21,7 +21,7 @@ need() {
     command -v "$bin" >/dev/null || { echo "Missing: $bin"; exit 1; }
   done
 }
-need debootstrap parted losetup mkfs.vfat mkfs.ext4 rsync grub-install
+need debootstrap parted losetup mkfs.vfat mkfs.ext4 rsync grub-install env
 
 ROOTFS="$BUILD/rootfs"
 rm -rf "$ROOTFS"
@@ -88,10 +88,23 @@ chroot_cleanup() {
   umount "$ROOTFS/dev/pts" 2>/dev/null || true
   umount "$ROOTFS/dev" 2>/dev/null || true
 }
+
+chroot_apt() {
+  local target="$1"
+  shift
+  chroot "$target" env DEBIAN_FRONTEND=noninteractive LC_ALL=C.UTF-8 apt-get "$@"
+}
+
+chroot_run() {
+  local target="$1"
+  shift
+  chroot "$target" env DEBIAN_FRONTEND=noninteractive LC_ALL=C.UTF-8 "$@"
+}
+
 trap chroot_cleanup EXIT
 
-chroot "$ROOTFS" apt-get update
-chroot "$ROOTFS" DEBIAN_FRONTEND=noninteractive apt-get install -y \
+chroot_apt "$ROOTFS" update
+chroot_apt "$ROOTFS" install -y \
   linux-image-generic \
   linux-firmware \
   grub-efi-amd64 \
@@ -137,13 +150,13 @@ mount --bind /dev "$BUILD/mnt/dev"
 mount --bind /dev/pts "$BUILD/mnt/dev/pts"
 mount --bind /proc "$BUILD/mnt/proc"
 mount --bind /sys "$BUILD/mnt/sys"
-chroot "$BUILD/mnt" grub-install \
+chroot_run "$BUILD/mnt" grub-install \
   --target=x86_64-efi \
   --efi-directory=/boot/efi \
   --boot-directory=/boot \
   --removable \
   --no-nvram
-chroot "$BUILD/mnt" update-grub
+chroot_run "$BUILD/mnt" update-grub
 umount "$BUILD/mnt/sys" "$BUILD/mnt/proc" "$BUILD/mnt/dev/pts" "$BUILD/mnt/dev"
 
 cleanup
