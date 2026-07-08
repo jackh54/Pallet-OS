@@ -11,21 +11,36 @@ log() {
 }
 
 find_drm_card() {
-  local card
+  local card driver path
   for card in /dev/dri/card[0-9]*; do
     [[ -e "$card" ]] || continue
-    echo "$card"
-    return 0
+    path="/sys/class/drm/${card##*/}/device/driver"
+    driver="$(basename "$(readlink -f "$path" 2>/dev/null || echo "")" 2>/dev/null || true)"
+    if [[ "$driver" == "amdgpu" || "$driver" == "i915" || "$driver" == "nouveau" ]]; then
+      echo "$card"
+      return 0
+    fi
+  done
+  for card in /dev/dri/card[0-9]*; do
+    [[ -e "$card" ]] && echo "$card" && return 0
   done
   return 1
 }
 
+has_amd_gpu() {
+  lspci -nn 2>/dev/null | grep -qiE 'vga|display.*\[(1002|1022):'
+}
+
+has_intel_gpu() {
+  lspci -nn 2>/dev/null | grep -qiE 'vga|display.*\[8086:'
+}
+
 load_gpu_modules() {
-  if lspci 2>/dev/null | grep -qiE 'vga|display.*amd'; then
+  if has_amd_gpu; then
     log "loading amdgpu"
     modprobe amdgpu 2>>"$LOG" || true
   fi
-  if lspci 2>/dev/null | grep -qiE 'vga|display.*intel'; then
+  if has_intel_gpu; then
     log "loading i915"
     modprobe i915 2>>"$LOG" || true
   fi

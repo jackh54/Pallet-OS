@@ -127,7 +127,7 @@ sudo reboot
 
 ## Black screen / blinking cursor (full fix)
 
-One command — installs all desktop scripts, fixes seat/DRM, enables X11 fallback:
+**AMD Chromebooks** now use **X11 directly** (labwc/Wayland was failing). One command:
 
 ```bash
 cd ~/Pallet-OS && git pull
@@ -135,15 +135,15 @@ sudo ./provision/fix-desktop-now.sh
 sudo reboot
 ```
 
-If `session.log` shows `pallet-x11-session: No such file or directory`, you need the command above.
+You should see: `AMD Chromebook: using X11 desktop (skipping labwc)`
 
 **Check after reboot:**
 
 ```bash
-sudo tail -30 /var/log/pallet/session.log
+sudo tail -20 /var/log/pallet/session.log
 ```
 
-You want either `starting labwc` or `starting X11 via startx` — not immediate exit.
+Look for `AMD Chromebook — using X11 desktop path` and `starting X11 via startx`.
 
 ---
 
