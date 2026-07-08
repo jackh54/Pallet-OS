@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# greetd session entrypoint — sets up env and starts labwc.
+set -euo pipefail
+
+PALLET_USER="${PALLET_USER:-pallet}"
+PALLET_HOME="/home/${PALLET_USER}"
+export HOME="$PALLET_HOME"
+export USER="$PALLET_USER"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export XDG_SESSION_TYPE=wayland
+export XDG_CURRENT_DESKTOP=PalletOS
+export MOZ_ENABLE_WAYLAND=1
+export GDK_BACKEND=wayland
+
+mkdir -p "$XDG_RUNTIME_DIR"
+chmod 700 "$XDG_RUNTIME_DIR"
+
+LOG_DIR="/var/log/pallet"
+mkdir -p "$LOG_DIR"
+exec >>"$LOG_DIR/session.log" 2>&1
+echo "$(date -Is) pallet-session starting (uid=$(id -u), wayland=${WAYLAND_DISPLAY:-unset})"
+
+exec dbus-run-session -- /usr/bin/labwc -c "$PALLET_HOME/.config/labwc/rc.xml"

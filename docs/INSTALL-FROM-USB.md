@@ -91,56 +91,44 @@ Create a **new** enroll token in the dashboard (old one may be used).
 
 ## Black screen after reboot (mouse cursor, no desktop)
 
-`pallet-shell` is an HTTP server — Chromium must open it as a fullscreen window.
+The shelf is a web UI — a browser must open it. If you only see a mouse cursor:
 
-1. Press **Ctrl+Alt+F3** to get a text console, log in, then run:
+**Fastest fix (keeps enrollment):**
 
 ```bash
-# One-line fix if you have the repo cloned:
 cd ~/Pallet-OS && git pull
-sudo install -m 0755 provision/pallet-shell-launch.sh /usr/local/bin/pallet-shell-launch
-sudo install -m 0644 provision/labwc/rc.xml /home/pallet/.config/labwc/rc.xml
-sudo chown pallet:pallet /home/pallet/.config/labwc/rc.xml
+sudo ./provision/install-pallet-os.sh
 sudo reboot
 ```
 
-2. Or apply manually without git:
+**Check logs from TTY (`Ctrl+Alt+F3`):**
 
 ```bash
-sudo tee /usr/local/bin/pallet-shell-launch >/dev/null <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-PORT="${PALLET_SHELL_PORT:-7420}"
-URL="http://127.0.0.1:${PORT}"
-/usr/local/bin/pallet-shell &
-for i in $(seq 1 50); do curl -sf "$URL/api/config" && break; sleep 0.2; done
-export GDK_BACKEND=wayland
-exec chromium --ozone-platform=wayland --kiosk --app="$URL" --no-first-run
-EOF
-sudo chmod 755 /usr/local/bin/pallet-shell-launch
-sudo sed -i 's|pallet-shell|/usr/local/bin/pallet-shell-launch|' /home/pallet/.config/labwc/rc.xml
-sudo reboot
+sudo tail -50 /var/log/pallet/desktop.log
+sudo tail -20 /var/log/pallet/session.log
 ```
 
-3. Confirm greetd + seatd (from PR #10):
+**Manual test as pallet user:**
+
+```bash
+sudo -u pallet /usr/local/bin/pallet-shell-launch
+```
+
+**Confirm greetd + seatd:**
 
 ```bash
 grep -E '^(command|user|vt)' /etc/greetd/config.toml
-# vt = 1, command = labwc..., user = pallet (not nested greetd)
+# command should be /usr/local/bin/pallet-session
 sudo systemctl enable --now seatd greetd
 ```
 
-4. Emergency fallback to Ubuntu desktop:
+**Emergency fallback to Ubuntu desktop:**
 
 ```bash
 sudo systemctl disable greetd
 sudo systemctl enable gdm3
 sudo reboot
 ```
-
-Launch log: `/run/user/1000/pallet/shell-launch.log` (uid may differ).
-
----
 
 ## Quick checklist
 

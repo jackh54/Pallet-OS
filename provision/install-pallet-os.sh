@@ -57,6 +57,7 @@ echo "==> Installing base packages"
 apt-get update
 apt-get install -y \
   chromium-browser chromium-codecs-ffmpeg \
+  epiphany-browser firefox \
   labwc seatd swayidle swaylock \
   network-manager \
   pipewire wireplumber \
@@ -100,6 +101,7 @@ echo "==> Building & installing pallet-shell"
 bash "$SCRIPT_DIR/build-shell.sh"
 install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
 install -m 0755 "$SCRIPT_DIR/pallet-shell-launch.sh" /usr/local/bin/pallet-shell-launch
+install -m 0755 "$SCRIPT_DIR/pallet-session.sh" /usr/local/bin/pallet-session
 install -m 0755 "$SCRIPT_DIR/pallet-lock" /usr/local/bin/pallet-lock
 
 echo "==> Building & installing pallet-agent"
@@ -142,6 +144,26 @@ install -m 0644 "$SCRIPT_DIR/systemd/labwc-pallet.desktop" /usr/share/wayland-se
 mkdir -p /home/$PALLET_USER/.config/labwc
 install -m 0644 "$SCRIPT_DIR/labwc/rc.xml" /home/$PALLET_USER/.config/labwc/rc.xml
 chown -R "$PALLET_USER:$PALLET_USER" /home/$PALLET_USER/.config
+
+echo "==> Desktop session logging"
+mkdir -p /var/log/pallet
+chown "$PALLET_USER:$PALLET_USER" /var/log/pallet
+chmod 755 /var/log/pallet
+
+echo "==> Browser permissions for greetd Wayland session"
+if command -v snap >/dev/null; then
+  if snap list chromium &>/dev/null; then
+    snap connect chromium:wayland 2>/dev/null || true
+    snap connect chromium:network 2>/dev/null || true
+    snap connect chromium:home 2>/dev/null || true
+    snap connect chromium:audio-playback 2>/dev/null || true
+  fi
+  if snap list firefox &>/dev/null; then
+    snap connect firefox:wayland 2>/dev/null || true
+    snap connect firefox:network 2>/dev/null || true
+    snap connect firefox:home 2>/dev/null || true
+  fi
+fi
 
 echo "==> Autologin via greetd (replace Ubuntu GDM)"
 # Ubuntu Desktop ships GDM3 as display-manager; greetd conflicts unless removed first.

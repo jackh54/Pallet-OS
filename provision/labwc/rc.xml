@@ -26,6 +26,23 @@
       <size>10</size>
     </font>
   </theme>
+  <core>
+    <gap>0</gap>
+  </core>
+  <windowRules>
+    <windowRule identifier="chromium*">
+      <action name="Maximize" />
+    </windowRule>
+    <windowRule identifier="chrome*">
+      <action name="Maximize" />
+    </windowRule>
+    <windowRule identifier="firefox*">
+      <action name="Maximize" />
+    </windowRule>
+    <windowRule identifier="org.gnome.Epiphany*">
+      <action name="Maximize" />
+    </windowRule>
+  </windowRules>
   <startup>
     <command>/usr/local/bin/pallet-shell-launch</command>
   </startup>
