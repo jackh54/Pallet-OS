@@ -126,17 +126,23 @@ func handleLauncher(w http.ResponseWriter, r *http.Request) {
 }
 
 type SettingsResponse struct {
-	CurrentAgent    string `json:"current_agent"`
-	CurrentShell    string `json:"current_shell"`
-	LatestVersion   string `json:"latest_version"`
-	UpdateAvailable bool   `json:"update_available"`
-	LastMessage     string `json:"last_message"`
-	LastError       string `json:"last_error,omitempty"`
-	AutoUpdates     bool   `json:"auto_updates"`
-	CheckedAt       string `json:"checked_at"`
-	Hostname        string `json:"hostname"`
-	WifiSSID        string `json:"wifi_ssid"`
-	BatteryPercent  *int   `json:"battery_percent"`
+	CurrentAgent    string          `json:"current_agent"`
+	CurrentShell    string          `json:"current_shell"`
+	LatestVersion   string          `json:"latest_version"`
+	UpdateAvailable bool            `json:"update_available"`
+	LastMessage     string          `json:"last_message"`
+	LastError       string          `json:"last_error,omitempty"`
+	AutoUpdates     bool            `json:"auto_updates"`
+	CheckedAt       string          `json:"checked_at"`
+	Hostname        string          `json:"hostname"`
+	WifiSSID        string          `json:"wifi_ssid"`
+	BatteryPercent  *int            `json:"battery_percent"`
+	DisplayAuto     bool            `json:"display_auto"`
+	DisplayOutput   string          `json:"display_output,omitempty"`
+	DisplayMode     string          `json:"display_mode,omitempty"`
+	DisplayScale    float64         `json:"display_scale"`
+	DisplayOutputs  []DisplayOutput `json:"display_outputs"`
+	DisplayCurrent  DisplayCurrent  `json:"display_current"`
 }
 
 func handleSettings(w http.ResponseWriter, r *http.Request) {
@@ -145,15 +151,43 @@ func handleSettings(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, loadSettings())
 	case http.MethodPut:
 		var body struct {
-			AutoUpdates bool `json:"auto_updates"`
+			AutoUpdates   *bool    `json:"auto_updates"`
+			DisplayAuto   *bool    `json:"display_auto"`
+			DisplayOutput *string  `json:"display_output"`
+			DisplayMode   *string  `json:"display_mode"`
+			DisplayScale  *float64 `json:"display_scale"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
+		settings := loadDeviceSettingsFile()
+		if body.AutoUpdates != nil {
+			settings.AutoUpdates = *body.AutoUpdates
+		}
+		if body.DisplayAuto != nil {
+			settings.DisplayAuto = *body.DisplayAuto
+		}
+		if body.DisplayOutput != nil {
+			settings.DisplayOutput = *body.DisplayOutput
+		}
+		if body.DisplayMode != nil {
+			settings.DisplayMode = *body.DisplayMode
+		}
+		if body.DisplayScale != nil {
+			settings.DisplayScale = *body.DisplayScale
+		}
+		if settings.DisplayScale == 0 {
+			settings.DisplayScale = 1.0
+		}
 		_ = os.MkdirAll("/var/lib/pallet", 0o755)
-		raw, _ := json.MarshalIndent(map[string]bool{"auto_updates": body.AutoUpdates}, "", "  ")
-		_ = os.WriteFile("/var/lib/pallet/settings.json", raw, 0o644)
+		if err := saveDeviceSettingsFile(settings); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if body.DisplayAuto != nil || body.DisplayOutput != nil || body.DisplayMode != nil || body.DisplayScale != nil {
+			_ = applyDisplaySettings()
+		}
 		writeJSON(w, loadSettings())
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -172,9 +206,11 @@ func handleCheckUpdates(w http.ResponseWriter, r *http.Request) {
 
 func loadSettings() SettingsResponse {
 	out := SettingsResponse{
-		CurrentAgent: agentVersionLabel,
-		CurrentShell: shellVersion,
-		AutoUpdates:  true,
+		CurrentAgent:   agentVersionLabel,
+		CurrentShell:   shellVersion,
+		AutoUpdates:    true,
+		DisplayAuto:    true,
+		DisplayScale:   1.0,
 	}
 	if data, err := os.ReadFile("/var/lib/pallet/update-status.json"); err == nil {
 		var status map[string]any
@@ -191,14 +227,18 @@ func loadSettings() SettingsResponse {
 			}
 		}
 	}
-	if data, err := os.ReadFile("/var/lib/pallet/settings.json"); err == nil {
-		var s struct {
-			AutoUpdates bool `json:"auto_updates"`
-		}
-		if json.Unmarshal(data, &s) == nil {
-			out.AutoUpdates = s.AutoUpdates
-		}
+	settings := loadDeviceSettingsFile()
+	out.AutoUpdates = settings.AutoUpdates
+	out.DisplayAuto = settings.DisplayAuto
+	out.DisplayOutput = settings.DisplayOutput
+	out.DisplayMode = settings.DisplayMode
+	out.DisplayScale = settings.DisplayScale
+	if out.DisplayScale == 0 {
+		out.DisplayScale = 1.0
 	}
+	display := loadDisplayInfo()
+	out.DisplayOutputs = display.Outputs
+	out.DisplayCurrent = display.Current
 	out.Hostname, _ = os.Hostname()
 	out.WifiSSID = wifiSSID()
 	out.BatteryPercent = batteryPercent()

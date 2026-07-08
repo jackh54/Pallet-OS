@@ -12,23 +12,23 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PALLET_USER="${PALLET_USER:-pallet}"
 
 install_pallet_shell() {
-  if [[ -x /usr/local/bin/pallet-shell ]]; then
-    echo "    OK /usr/local/bin/pallet-shell"
-    return 0
-  fi
-
   echo "==> Installing pallet-shell (required for browser UI)"
-  if [[ -x "$REPO_ROOT/dist/pallet-shell" ]]; then
-    install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
-    echo "    installed from repo dist/"
-    return 0
-  fi
-
   if command -v go >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
     echo "    building pallet-shell from source..."
     bash "$SCRIPT_DIR/build-shell.sh"
     install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
     echo "    built and installed pallet-shell"
+    return 0
+  fi
+
+  if [[ -x /usr/local/bin/pallet-shell ]]; then
+    echo "    OK /usr/local/bin/pallet-shell (rebuild skipped — install go+npm for display settings UI)"
+    return 0
+  fi
+
+  if [[ -x "$REPO_ROOT/dist/pallet-shell" ]]; then
+    install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
+    echo "    installed from repo dist/"
     return 0
   fi
 
@@ -58,7 +58,8 @@ install_pallet_shell() {
 
 echo "==> Installing Pallet desktop scripts"
 for script in pallet-session.sh pallet-drm-setup.sh pallet-x11-session.sh \
-  pallet-x11-display.sh pallet-shell-launch.sh pallet-graphics-env.sh pallet-lock; do
+  pallet-x11-display.sh pallet-browser-launch.sh pallet-shell-launch.sh \
+  pallet-graphics-env.sh pallet-lock; do
   install -m 0755 "$SCRIPT_DIR/$script" "/usr/local/bin/${script%.sh}"
 done
 
@@ -67,11 +68,11 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get install -y \
   xserver-xorg-core xinit x11-xserver-utils x11-utils xserver-xorg-video-all \
   xserver-xorg-video-amdgpu xserver-xorg-legacy dbus-x11 \
-  epiphany-browser firefox surf wmctrl x11-xserver-utils \
+  epiphany-browser firefox falkon surf wmctrl x11-xserver-utils xdotool \
   2>/dev/null || true
 apt-get install -y \
   xserver-xorg-core xinit x11-xserver-utils x11-utils xserver-xorg-video-all \
-  xserver-xorg-video-amdgpu epiphany-browser dbus-x11 surf wmctrl \
+  xserver-xorg-video-amdgpu epiphany-browser dbus-x11 surf wmctrl falkon \
   2>/dev/null || true
 
 install_pallet_shell || true
@@ -93,6 +94,17 @@ install -m 0644 "$SCRIPT_DIR/labwc/rc.xml" /home/$PALLET_USER/.config/labwc/rc.x
 chown -R "$PALLET_USER:$PALLET_USER" /home/$PALLET_USER/.config
 chown "$PALLET_USER:$PALLET_USER" /var/log/pallet
 
+if [[ ! -f /var/lib/pallet/settings.json ]]; then
+  cat > /var/lib/pallet/settings.json <<'EOF'
+{
+  "auto_updates": true,
+  "display_auto": true,
+  "display_scale": 1.0
+}
+EOF
+  chmod 0644 /var/lib/pallet/settings.json
+fi
+
 install -m 0755 /dev/stdin "/home/$PALLET_USER/.xinitrc" <<'EOF'
 #!/bin/sh
 exec /usr/local/bin/pallet-x11-session
@@ -107,7 +119,8 @@ fi
 
 echo "==> Verify installed desktop files"
 missing=0
-for bin in pallet-shell pallet-session pallet-drm-setup pallet-x11-session pallet-x11-display pallet-shell-launch pallet-graphics-env; do
+for bin in pallet-shell pallet-browser-launch pallet-session pallet-drm-setup \
+  pallet-x11-session pallet-x11-display pallet-shell-launch pallet-graphics-env; do
   if [[ -x "/usr/local/bin/$bin" ]]; then
     echo "    OK /usr/local/bin/$bin"
   else
@@ -133,3 +146,7 @@ fi
 
 echo ""
 echo "Desktop fix installed. Reboot: sudo reboot"
+echo ""
+echo "Manual display config (TTY): edit /var/lib/pallet/settings.json"
+echo '  {"display_auto":false,"display_output":"eDP-1","display_mode":"1920x1080","display_scale":1.0}'
+echo "  then: sudo /usr/local/bin/pallet-x11-display apply && sudo systemctl restart greetd"
