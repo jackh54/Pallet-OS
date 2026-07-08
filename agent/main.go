@@ -21,6 +21,7 @@ func main() {
 	serverURL := flag.String("server", "", "Control server URL (overrides config)")
 	configPath := flag.String("config", "/etc/pallet/agent.json", "Agent config path")
 	enrollToken := flag.String("enroll", "", "One-time enrollment token")
+	enrollOnly := flag.Bool("enroll-only", false, "Enroll device and exit (do not start heartbeat loop)")
 	flag.Parse()
 
 	cfg, err := loadConfig(*configPath)
@@ -46,8 +47,14 @@ func main() {
 			log.Fatalf("save config: %v", err)
 		}
 		log.Printf("enrolled device %s", cfg.DeviceID)
+		if *enrollOnly {
+			return
+		}
 	}
 
+	if *enrollOnly {
+		log.Fatal("device already enrolled")
+	}
 	agent := &Agent{cfg: cfg, configPath: *configPath, client: &http.Client{Timeout: 45 * time.Second}}
 	agent.Run()
 }
