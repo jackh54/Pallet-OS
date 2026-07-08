@@ -11,6 +11,11 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y greetd seatd polkitd 2>/dev/nu
 
 systemctl enable --now seatd 2>/dev/null || true
 
+# Ubuntu seatd socket is often root:video; some distros use a 'seat' group.
+if ! getent group seat >/dev/null; then
+  groupadd -r seat 2>/dev/null || groupadd seat 2>/dev/null || true
+fi
+
 for grp in seat video render input audio; do
   if getent group "$grp" >/dev/null; then
     usermod -aG "$grp" "$PALLET_USER" 2>/dev/null || true

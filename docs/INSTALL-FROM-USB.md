@@ -137,10 +137,12 @@ graphics mode: hardware
 
 The GPU driver loaded (`amdgpu` in dmesg is fine) but **greetd did not hand GPU access to labwc**.
 
-**Immediate fix:**
+**Immediate fix** (skip `seat` if that group doesn't exist on Ubuntu):
 
 ```bash
-sudo usermod -aG seat,render,video,input pallet
+sudo groupadd seat 2>/dev/null || true
+sudo usermod -aG render,video,input pallet
+getent group seat >/dev/null && sudo usermod -aG seat pallet
 sudo mkdir -p /etc/pallet
 sudo touch /etc/pallet/force-software-rendering
 sudo reboot
