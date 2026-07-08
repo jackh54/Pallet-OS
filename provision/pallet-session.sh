@@ -21,4 +21,8 @@ mkdir -p "$LOG_DIR"
 exec >>"$LOG_DIR/session.log" 2>&1
 echo "$(date -Is) pallet-session starting (uid=$(id -u), wayland=${WAYLAND_DISPLAY:-unset})"
 
+# shellcheck disable=SC1091
+source /usr/local/bin/pallet-graphics-env
+echo "$(date -Is) graphics mode: ${PALLET_SOFTWARE_RENDERING:+software}${PALLET_SOFTWARE_RENDERING:-hardware}"
+
 exec dbus-run-session -- /usr/bin/labwc -c "$PALLET_HOME/.config/labwc/rc.xml"
