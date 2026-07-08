@@ -18,7 +18,7 @@ import (
 var agentVersion = "1.0.0"
 
 func main() {
-	serverURL := flag.String("server", envOr("PALLET_SERVER_URL", "http://127.0.0.1:8787"), "Control server URL")
+	serverURL := flag.String("server", "", "Control server URL (overrides config)")
 	configPath := flag.String("config", "/etc/pallet/agent.json", "Agent config path")
 	enrollToken := flag.String("enroll", "", "One-time enrollment token")
 	flag.Parse()
@@ -28,11 +28,9 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 	if cfg == nil {
-		cfg = &Config{ServerURL: *serverURL}
+		cfg = &Config{}
 	}
-	if *serverURL != "" {
-		cfg.ServerURL = strings.TrimRight(*serverURL, "/")
-	}
+	cfg.ServerURL = resolveServerURL(*serverURL, cfg.ServerURL)
 
 	if cfg.DeviceID == "" || cfg.DeviceToken == "" {
 		if *enrollToken == "" {
@@ -69,7 +67,7 @@ type Agent struct {
 }
 
 func (a *Agent) Run() {
-	log.Printf("pallet-agent %s starting for device %s", agentVersion, a.cfg.DeviceID)
+	log.Printf("pallet-agent %s starting for device %s @ %s", agentVersion, a.cfg.DeviceID, a.cfg.ServerURL)
 	backoff := 5 * time.Second
 	for {
 		if err := a.tick(); err != nil {
@@ -261,6 +259,19 @@ func saveConfig(path string, cfg *Config) error {
 		return err
 	}
 	return os.WriteFile(path, raw, 0o600)
+}
+
+func resolveServerURL(flagURL, configURL string) string {
+	if flagURL != "" {
+		return strings.TrimRight(flagURL, "/")
+	}
+	if configURL != "" {
+		return strings.TrimRight(configURL, "/")
+	}
+	if v := os.Getenv("PALLET_SERVER_URL"); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return "http://127.0.0.1:8787"
 }
 
 func envOr(key, fallback string) string {
