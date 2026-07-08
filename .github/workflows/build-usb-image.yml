@@ -39,7 +39,7 @@ jobs:
 
       - name: Build USB image
         env:
-          PALLET_IMAGE_SIZE_MB: "4096"
+          PALLET_IMAGE_SIZE_MB: "6144"
           PALLET_COMPRESS: "1"
         run: |
           sudo -E ./provision/build-chromebook-image.sh
@@ -59,11 +59,11 @@ jobs:
           - **pallet-os-chromebook.img.zst** — compressed image (decompress before flashing)
           - **pallet-os-chromebook.img.zst.sha256** — checksum
 
-          ## Flash (recommended: Balena Etcher)
+          ## Flash (terminal — recommended)
           1. Download \`pallet-os-chromebook.img.zst\`
           2. Verify: \`sha256sum -c pallet-os-chromebook.img.zst.sha256\`
           3. Decompress: \`zstd -d pallet-os-chromebook.img.zst\`
-          4. Open **Balena Etcher** → Flash from file → select \`pallet-os-chromebook.img\`
+          4. Flash: \`sudo dd if=pallet-os-chromebook.img of=/dev/sdX bs=4M status=progress conv=fsync && sync\`
           5. Boot Chromebook from USB (MrChromebox UEFI firmware required)
 
           ## Chromebook Recovery Utility?
