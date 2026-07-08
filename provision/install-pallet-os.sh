@@ -104,7 +104,6 @@ install -m 0755 "$SCRIPT_DIR/pallet-lock" /usr/local/bin/pallet-lock
 echo "==> Building & installing pallet-agent"
 bash "$SCRIPT_DIR/build-agent.sh"
 install -m 0755 "$REPO_ROOT/dist/pallet-agent" /usr/local/bin/pallet-agent
-install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
 mkdir -p /var/lib/pallet
 cat > /var/lib/pallet/versions.json <<EOF
 {
@@ -135,10 +134,22 @@ mkdir -p /home/$PALLET_USER/.config/labwc
 install -m 0644 "$SCRIPT_DIR/labwc/rc.xml" /home/$PALLET_USER/.config/labwc/rc.xml
 chown -R "$PALLET_USER:$PALLET_USER" /home/$PALLET_USER/.config
 
-echo "==> Autologin via greetd"
-apt-get install -y greetd
+echo "==> Autologin via greetd (replace Ubuntu GDM)"
+# Ubuntu Desktop ships GDM3 as display-manager; greetd conflicts unless removed first.
+for dm in gdm3 gdm sddm lightdm; do
+  systemctl stop "$dm" 2>/dev/null || true
+  systemctl disable "$dm" 2>/dev/null || true
+done
+if [[ -e /etc/systemd/system/display-manager.service ]]; then
+  rm -f /etc/systemd/system/display-manager.service
+fi
+DEBIAN_FRONTEND=noninteractive apt-get install -y greetd
 install -m 0644 "$SCRIPT_DIR/greetd/config.toml" /etc/greetd/config.toml
+systemctl daemon-reload
 systemctl enable greetd
+ln -sf /lib/systemd/system/greetd.service /etc/systemd/system/display-manager.service
+usermod -aG seat,video,input,render,audio "$PALLET_USER" 2>/dev/null || true
+systemctl enable seatd 2>/dev/null || true
 
 echo "==> Waydroid (Android apps)"
 if [[ -f "$SCRIPT_DIR/install-waydroid.sh" ]]; then
@@ -155,7 +166,7 @@ SHOW_FILE_MANAGER=0
 EOF
 
 echo "==> Disable unused services"
-for svc in cups bluetooth avahi-daemon; do
+for svc in cups bluetooth avahi-daemon gdm3 gdm; do
   systemctl disable --now "$svc" 2>/dev/null || true
 done
 
