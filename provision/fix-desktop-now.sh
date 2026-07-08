@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Install or refresh all Pallet desktop scripts without a full re-provision.
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Run as root: sudo $0"
+  exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PALLET_USER="${PALLET_USER:-pallet}"
+
+echo "==> Installing Pallet desktop scripts"
+for script in pallet-session.sh pallet-drm-setup.sh pallet-x11-session.sh \
+  pallet-shell-launch.sh pallet-graphics-env.sh pallet-lock; do
+  install -m 0755 "$SCRIPT_DIR/$script" "/usr/local/bin/${script%.sh}"
+done
+
+echo "==> X11 + seat packages"
+export DEBIAN_FRONTEND=noninteractive
+apt-get install -y \
+  xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
+  x11-xserver-xorg-input-all 2>/dev/null || \
+apt-get install -y xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all
+
+bash "$SCRIPT_DIR/greetd-seat.sh" || true
+bash "$SCRIPT_DIR/chromebook-graphics.sh" || true
+
+install -m 0644 "$SCRIPT_DIR/greetd/config.toml" /etc/greetd/config.toml
+
+mkdir -p /home/$PALLET_USER/.config/labwc /var/log/pallet /etc/pallet
+install -m 0644 "$SCRIPT_DIR/labwc/rc.xml" /home/$PALLET_USER/.config/labwc/rc.xml
+chown -R "$PALLET_USER:$PALLET_USER" /home/$PALLET_USER/.config
+chown "$PALLET_USER:$PALLET_USER" /var/log/pallet
+
+# X11 entry for startx
+install -m 0755 /dev/stdin "/home/$PALLET_USER/.xinitrc" <<'EOF'
+#!/bin/sh
+exec /usr/local/bin/pallet-x11-session
+EOF
+chown "$PALLET_USER:$PALLET_USER" "/home/$PALLET_USER/.xinitrc"
+
+# AMD Chromebooks: software rendering is the reliable default.
+if lspci 2>/dev/null | grep -qiE 'vga|display.*amd'; then
+  if [[ ! -f /etc/pallet/force-hardware-rendering ]]; then
+    touch /etc/pallet/force-software-rendering
+    echo "    Enabled software rendering for AMD Chromebook"
+  fi
+fi
+
+echo "==> Verify installed desktop files"
+missing=0
+for bin in pallet-session pallet-drm-setup pallet-x11-session pallet-shell-launch pallet-graphics-env; do
+  if [[ -x "/usr/local/bin/$bin" ]]; then
+    echo "    OK /usr/local/bin/$bin"
+  else
+    echo "    MISSING /usr/local/bin/$bin"
+    missing=1
+  fi
+done
+
+systemctl enable --now seatd greetd 2>/dev/null || true
+systemctl restart greetd 2>/dev/null || true
+
+if [[ "$missing" -ne 0 ]]; then
+  echo "ERROR: desktop install incomplete"
+  exit 1
+fi
+
+echo ""
+echo "Desktop fix installed. Reboot: sudo reboot"
