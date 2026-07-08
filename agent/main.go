@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const agentVersion = "1.0.0"
+var agentVersion = "1.0.0"
 
 func main() {
 	serverURL := flag.String("server", envOr("PALLET_SERVER_URL", "http://127.0.0.1:8787"), "Control server URL")
@@ -98,6 +98,7 @@ func (a *Agent) tick() error {
 	if err := applyPolicy(resp.Policy); err != nil {
 		log.Printf("policy apply warning: %v", err)
 	}
+	go maybeApplyUpdates(resp.Policy)
 	for _, cmd := range resp.Commands {
 		result, success := a.executeCommand(cmd)
 		_ = a.api("POST", fmt.Sprintf("/api/v1/device/commands/%s/complete", cmd.ID), map[string]any{
@@ -168,6 +169,9 @@ func (a *Agent) executeCommand(cmd Command) (map[string]any, bool) {
 			}
 		}
 		return map[string]any{"applied": true}, true
+	case "check_updates":
+		go maybeApplyUpdates(Policy{Updates: UpdatesPolicy{Enabled: true, Auto: true}})
+		return map[string]any{"scheduled": true}, true
 	default:
 		return map[string]any{"error": "unknown_command"}, false
 	}

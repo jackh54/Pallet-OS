@@ -197,6 +197,7 @@ app.post("/api/v1/admin/devices/:id/commands", async (c) => {
     "install_app",
     "remove_app",
     "apply_policy",
+    "check_updates",
   ];
   if (!allowed.includes(body.type)) return jsonError(c, 400, "invalid_command");
   if (body.type === "lock") await setDeviceLocked(c.env, id, true);

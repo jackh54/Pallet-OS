@@ -20,6 +20,7 @@ type Policy struct {
 	Chromium     map[string]any `json:"chromium"`
 	Android      AndroidPolicy  `json:"android"`
 	Shell        ShellPolicy    `json:"shell"`
+	Updates      UpdatesPolicy  `json:"updates"`
 }
 
 type AndroidPolicy struct {
@@ -215,7 +216,10 @@ func applyPolicy(policy Policy) error {
 	if err := writeShellConfig(policy); err != nil {
 		return err
 	}
-	return reconcileAndroidApps(policy.Android)
+	if err := reconcileAndroidApps(policy.Android); err != nil {
+		return err
+	}
+	return nil
 }
 
 func writeChromiumPolicy(chromium map[string]any) error {

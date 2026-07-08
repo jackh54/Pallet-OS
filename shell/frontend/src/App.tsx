@@ -9,6 +9,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import { fetchConfig, launchApp, ShellApp, ShellConfig } from "./api";
+import { SettingsPanel } from "./Settings";
 
 const defaultConfig: ShellConfig = {
   wallpaper: "",
@@ -45,6 +46,7 @@ export default function App() {
   const [config, setConfig] = useState<ShellConfig>(defaultConfig);
   const [launcherOpen, setLauncherOpen] = useState(false);
   const [quickSettingsOpen, setQuickSettingsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -131,6 +133,8 @@ export default function App() {
         </div>
       )}
 
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+
       {quickSettingsOpen && (
         <div className="absolute bottom-14 right-3 z-40 w-80 rounded-2xl bg-chrome-surface/95 backdrop-blur border border-white/10 shadow-2xl p-4">
           <h3 className="text-sm font-medium mb-3">Quick settings</h3>
@@ -144,8 +148,14 @@ export default function App() {
             <button className="rounded-xl bg-white/5 px-3 py-3 text-left hover:bg-white/10">
               Bluetooth
             </button>
-            <button className="rounded-xl bg-white/5 px-3 py-3 text-left hover:bg-white/10">
-              Night Light
+            <button
+              className="rounded-xl bg-white/5 px-3 py-3 text-left hover:bg-white/10 col-span-2"
+              onClick={() => {
+                setQuickSettingsOpen(false);
+                setSettingsOpen(true);
+              }}
+            >
+              Open Settings →
             </button>
           </div>
         </div>
@@ -195,7 +205,11 @@ export default function App() {
             )}
             <span className="tabular-nums min-w-[4.5rem] text-right">{config.clock}</span>
           </button>
-          <button className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="h-10 w-10 rounded-full hover:bg-white/10 flex items-center justify-center"
+            title="Settings"
+          >
             <Settings size={18} />
           </button>
         </div>

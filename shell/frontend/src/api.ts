@@ -19,6 +19,20 @@ export interface ShellConfig {
   locked: boolean;
 }
 
+export interface SettingsData {
+  current_agent: string;
+  current_shell: string;
+  latest_version: string;
+  update_available: boolean;
+  last_message: string;
+  last_error?: string;
+  auto_updates: boolean;
+  checked_at: string;
+  hostname: string;
+  wifi_ssid: string;
+  battery_percent: number | null;
+}
+
 export async function fetchConfig(): Promise<ShellConfig> {
   const res = await fetch("/api/config");
   if (!res.ok) throw new Error("config fetch failed");
@@ -33,10 +47,20 @@ export async function launchApp(id: string): Promise<void> {
   });
 }
 
-export async function toggleLauncher(open: boolean): Promise<void> {
-  await fetch("/api/launcher", {
-    method: "POST",
+export async function fetchSettings(): Promise<SettingsData> {
+  const res = await fetch("/api/settings");
+  if (!res.ok) throw new Error("settings fetch failed");
+  return res.json();
+}
+
+export async function saveSettings(patch: { auto_updates: boolean }): Promise<void> {
+  await fetch("/api/settings", {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ open }),
+    body: JSON.stringify(patch),
   });
+}
+
+export async function triggerUpdateCheck(): Promise<void> {
+  await fetch("/api/settings/check-updates", { method: "POST" });
 }
