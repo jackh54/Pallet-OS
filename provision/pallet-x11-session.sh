@@ -36,8 +36,24 @@ ensure_dbus() {
   return 1
 }
 
+show_status() {
+  local msg=$1
+  if command -v xmessage >/dev/null 2>&1; then
+    xmessage -center -timeout 8 "$msg" >/dev/null 2>&1 &
+  fi
+}
+
+maximize_active_window() {
+  if command -v wmctrl >/dev/null 2>&1; then
+    sleep 1
+    wmctrl -r :ACTIVE: -b add,maximized_vert,maximized_horz 2>/dev/null || true
+    wmctrl -r :ACTIVE: -e 0,0,0,-1,-1 2>/dev/null || true
+  fi
+}
+
 log "X11 session on $DISPLAY (user=$(id -un), home=$HOME, software=${PALLET_SOFTWARE_RENDERING:-0})"
 ensure_dbus || true
+show_status "Pallet OS starting..."
 
 xset s off 2>/dev/null || true
 xset -dpms 2>/dev/null || true
@@ -58,27 +74,33 @@ configure_display
 sleep 1
 configure_display
 
-ensure_shell() {
-  if curl -sf "$URL/api/config" >/dev/null 2>&1; then
+start_shell() {
+  if [[ ! -x /usr/local/bin/pallet-shell ]]; then
+    log "ERROR: /usr/local/bin/pallet-shell missing — run: sudo ./provision/fix-desktop-now.sh"
+    return 1
+  fi
+  if pgrep -x pallet-shell >/dev/null 2>&1; then
     return 0
   fi
+  log "starting pallet-shell"
+  /usr/local/bin/pallet-shell >>"$LOG" 2>&1 &
+  disown 2>/dev/null || true
+  return 0
+}
 
-  if ! pgrep -x pallet-shell >/dev/null 2>&1; then
-    log "starting pallet-shell"
-    /usr/local/bin/pallet-shell >>"$LOG" 2>&1 &
-    disown 2>/dev/null || true
+shell_http_ready() {
+  curl -sf "$URL/api/config" >/dev/null 2>&1
+}
+
+start_shell || true
+
+launch_surf() {
+  if ! command -v surf >/dev/null 2>&1; then
+    return 127
   fi
-
-  for _ in $(seq 1 80); do
-    if curl -sf "$URL/api/config" >/dev/null 2>&1; then
-      log "pallet-shell ready url=$URL"
-      return 0
-    fi
-    sleep 0.25
-  done
-
-  log "ERROR: pallet-shell not reachable at $URL"
-  return 1
+  log "launching surf $URL"
+  surf -F -S "$URL" >>"$LOG" 2>&1
+  return $?
 }
 
 launch_epiphany() {
@@ -94,8 +116,11 @@ launch_epiphany() {
 
   for bin in epiphany epiphany-browser; do
     if command -v "$bin" >/dev/null 2>&1; then
-      log "launching $bin ${flags[*]} $URL"
-      "$bin" "${flags[@]}" "$URL" >>"$LOG" 2>&1
+      log "launching $bin $URL"
+      "$bin" "${flags[@]}" "$URL" >>"$LOG" 2>&1 &
+      local pid=$!
+      maximize_active_window
+      wait "$pid"
       return $?
     fi
   done
@@ -108,8 +133,11 @@ launch_firefox() {
     flags+=(--disable-gpu)
   fi
   if command -v firefox >/dev/null 2>&1; then
-    log "launching firefox"
-    firefox "${flags[@]}" "$URL" >>"$LOG" 2>&1
+    log "launching firefox $URL"
+    firefox "${flags[@]}" "$URL" >>"$LOG" 2>&1 &
+    local pid=$!
+    maximize_active_window
+    wait "$pid"
     return $?
   fi
   return 127
@@ -139,30 +167,51 @@ launch_chromium() {
   for bin in /usr/bin/chromium /usr/bin/chromium-browser /snap/bin/chromium; do
     if [[ "$bin" == /snap/bin/chromium ]]; then
       if command -v snap >/dev/null 2>&1 && snap list chromium &>/dev/null; then
-        log "launching snap run chromium"
-        snap run chromium "${flags[@]}" >>"$LOG" 2>&1
+        log "launching snap run chromium $URL"
+        snap run chromium "${flags[@]}" >>"$LOG" 2>&1 &
+        local pid=$!
+        maximize_active_window
+        wait "$pid"
         return $?
       fi
       continue
     fi
     if [[ -x "$bin" ]] || command -v "$bin" >/dev/null 2>&1; then
-      # Debian chromium supports --no-sandbox; snap does not.
-      log "launching $bin"
-      "$bin" --no-sandbox "${flags[@]}" >>"$LOG" 2>&1
+      log "launching $bin $URL"
+      "$bin" --no-sandbox "${flags[@]}" >>"$LOG" 2>&1 &
+      local pid=$!
+      maximize_active_window
+      wait "$pid"
       return $?
     fi
   done
   return 127
 }
 
-log "browsers: epiphany=$(command -v epiphany-browser 2>/dev/null || command -v epiphany 2>/dev/null || echo missing) chromium=$(command -v chromium 2>/dev/null || command -v chromium-browser 2>/dev/null || echo missing)"
+log "browsers: surf=$(command -v surf 2>/dev/null || echo missing) epiphany=$(command -v epiphany-browser 2>/dev/null || command -v epiphany 2>/dev/null || echo missing) chromium=$(command -v chromium 2>/dev/null || echo missing) shell=$(command -v pallet-shell 2>/dev/null || echo missing)"
 
 while true; do
-  if ! ensure_shell; then
-    log "shell unavailable — retry in 3s"
-    sleep 3
-    continue
+  start_shell || true
+
+  if ! shell_http_ready; then
+    log "waiting for pallet-shell at $URL"
+    show_status "Starting Pallet shell..."
+    for _ in $(seq 1 40); do
+      shell_http_ready && break
+      sleep 0.25
+    done
   fi
+
+  if shell_http_ready; then
+    log "pallet-shell ready url=$URL"
+    show_status "Launching browser..."
+  else
+    log "WARNING: pallet-shell not ready — launching browser anyway"
+    show_status "Shell starting — opening browser..."
+  fi
+
+  launch_surf && continue
+  log "surf failed with $?"
 
   launch_epiphany && continue
   log "epiphany failed with $?"
@@ -174,5 +223,6 @@ while true; do
   log "chromium failed with $?"
 
   log "all browsers failed — check $LOG"
+  show_status "Browser failed — retrying. See /var/log/pallet/desktop.log"
   sleep 5
 done

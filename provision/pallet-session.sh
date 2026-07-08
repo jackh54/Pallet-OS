@@ -68,11 +68,12 @@ run_x11() {
   cleanup_x11
   modprobe amdgpu 2>/dev/null || true
 
-  log "starting X11 via startx"
-  if ! dbus-run-session -- startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1; then
+  log "starting X11 via startx (vt1)"
+  # dbus is started inside pallet-x11-session; avoid double dbus-run-session here.
+  if ! startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1; then
     log "startx failed — retrying without custom xorg snippets"
     mv /etc/X11/xorg.conf.d/20-amdgpu.conf /etc/X11/xorg.conf.d/20-amdgpu.conf.bak 2>/dev/null || true
-    dbus-run-session -- startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1 || true
+    startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1 || true
     [[ -f /etc/X11/xorg.conf.d/20-amdgpu.conf.bak ]] && \
       mv /etc/X11/xorg.conf.d/20-amdgpu.conf.bak /etc/X11/xorg.conf.d/20-amdgpu.conf 2>/dev/null || true
   fi
