@@ -57,7 +57,17 @@ find_panel_from_sysfs() {
 }
 
 pick_xrandr_output() {
-  local out
+  local sysfs_name=${1:-} out
+  if [[ -n "$sysfs_name" ]]; then
+    out="$(xrandr 2>/dev/null | awk -v want="$sysfs_name" '
+      $0 ~ ("^" want " ") {print $1; exit}
+    ')"
+    [[ -n "$out" ]] && echo "$out" && return 0
+    out="$(xrandr 2>/dev/null | awk -v want="$sysfs_name" '
+      index($1, want) {print $1; exit}
+    ')"
+    [[ -n "$out" ]] && echo "$out" && return 0
+  fi
   out="$(xrandr 2>/dev/null | awk '/^eDP[^ ]* connected/{print $1; exit}')"
   [[ -n "$out" ]] && echo "$out" && return 0
   xrandr 2>/dev/null | awk '/ connected/{print $1; exit}'
@@ -124,15 +134,22 @@ pick_best_xrandr_mode() {
 }
 
 apply_resolution() {
-  local output=$1 mode=$2 applied
+  local output=$1 mode=$2 applied width height
 
+  # Output may show disconnected until explicitly enabled on AMD Chromebooks.
+  xrandr --output "$output" --auto 2>>"$LOG" || true
   xrandr --output "$output" --primary 2>>"$LOG" || true
 
   applied="$(ensure_mode "$output" "$mode" 2>/dev/null || true)"
   [[ -z "$applied" ]] && applied="$mode"
 
-  if xrandr --output "$output" --mode "$applied" 2>>"$LOG"; then
-    log "set $output to $applied"
+  width="${mode%x*}"
+  height="${mode#*x}"
+
+  if xrandr --output "$output" --mode "$applied" --pos 0x0 2>>"$LOG"; then
+    [[ "$width" =~ ^[0-9]+$ && "$height" =~ ^[0-9]+$ ]] && \
+      xrandr --fb "${width}x${height}" 2>>"$LOG" || true
+    log "set $output to $applied fb=${width}x${height}"
     return 0
   fi
 
@@ -156,6 +173,9 @@ fi
 
 if [[ -z "$output" ]]; then
   output="$(pick_xrandr_output)"
+elif ! xrandr 2>/dev/null | grep -q "^${output} "; then
+  log "xrandr missing $output — trying fuzzy match"
+  output="$(pick_xrandr_output "$output")"
 fi
 
 if [[ -z "$output" ]]; then
