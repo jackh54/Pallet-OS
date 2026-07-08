@@ -17,8 +17,8 @@ if [[ ! -e /dev/dri/card0 ]]; then
   return 0 2>/dev/null || exit 0
 fi
 
-# Kernel/driver failures on Chromebooks often show as i915/drm/firmware errors before a black screen.
-if dmesg 2>/dev/null | grep -qiE 'i915.*failed|i915.*error|drm.*failed|gpu.*hang|firmware: failed'; then
+# Kernel/driver failures on Chromebooks often show before a black screen.
+if dmesg 2>/dev/null | grep -qiE 'i915.*failed|i915.*error|amdgpu.*failed|amdgpu.*error|drm.*failed|gpu.*hang|firmware: failed'; then
   export WLR_RENDERER=pixman
   export LIBGL_ALWAYS_SOFTWARE=1
   export MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
