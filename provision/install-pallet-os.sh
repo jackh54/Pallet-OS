@@ -73,6 +73,9 @@ apt-get install -y \
 echo "==> Chromebook hardware support"
 # Most x86_64 Chromebooks with MrChromebox firmware use standard Ubuntu kernels.
 # Additional touchpad/audio firmware may be required per model — see docs/CHROMEBOOK.md
+if [[ -f "$SCRIPT_DIR/chromebook-graphics.sh" ]]; then
+  bash "$SCRIPT_DIR/chromebook-graphics.sh" || true
+fi
 if [[ -f "$SCRIPT_DIR/chromebook-modules.sh" ]]; then
   bash "$SCRIPT_DIR/chromebook-modules.sh" || true
 fi

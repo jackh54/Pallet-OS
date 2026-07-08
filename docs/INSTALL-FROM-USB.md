@@ -125,6 +125,34 @@ sudo reboot
 
 ---
 
+## Black screen + brief driver error (i915 / drm / firmware)
+
+If you see a flash of text mentioning **i915**, **drm**, **firmware**, or **gpu** then a black screen, the Intel GPU driver failed. Force CPU rendering:
+
+```bash
+sudo mkdir -p /etc/pallet
+sudo touch /etc/pallet/force-software-rendering
+sudo reboot
+```
+
+**Check what failed:**
+
+```bash
+dmesg | grep -iE 'i915|drm|gpu|firmware|failed'
+lspci -k | grep -A3 -i vga
+sudo tail -30 /var/log/pallet/session.log
+```
+
+**Full fix from repo:**
+
+```bash
+cd ~/Pallet-OS && git pull
+sudo ./provision/install-pallet-os.sh
+sudo reboot
+```
+
+---
+
 ## Black screen after reboot (mouse cursor, no desktop)
 
 The shelf is a web UI — a browser must open it. If you only see a mouse cursor:
