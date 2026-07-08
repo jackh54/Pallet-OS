@@ -1,0 +1,97 @@
+name: Build Chromebook USB image
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: "Attach image to a GitHub Release (requires tag)"
+        required: false
+        default: "false"
+        type: boolean
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install image build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debootstrap \
+            grub-efi-amd64-bin \
+            grub2-common \
+            parted \
+            dosfstools \
+            e2fsprogs \
+            rsync \
+            zstd \
+            qemu-utils
+
+      - name: Build USB image
+        env:
+          PALLET_IMAGE_SIZE_MB: "4096"
+          PALLET_COMPRESS: "1"
+        run: |
+          sudo -E ./provision/build-chromebook-image.sh
+          sudo chown -R "$USER:$USER" build/
+          ls -lh build/
+
+      - name: Write image metadata
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+            VERSION="git-$(git rev-parse --short HEAD)"
+          fi
+          cat > build/FLASHING.md <<EOF
+          # Pallet OS USB image — ${VERSION}
+
+          ## Download
+          - **pallet-os-chromebook.img.zst** — compressed image (decompress before flashing)
+          - **pallet-os-chromebook.img.zst.sha256** — checksum
+
+          ## Flash (recommended: Balena Etcher)
+          1. Download \`pallet-os-chromebook.img.zst\`
+          2. Verify: \`sha256sum -c pallet-os-chromebook.img.zst.sha256\`
+          3. Decompress: \`zstd -d pallet-os-chromebook.img.zst\`
+          4. Open **Balena Etcher** → Flash from file → select \`pallet-os-chromebook.img\`
+          5. Boot Chromebook from USB (MrChromebox UEFI firmware required)
+
+          ## Chromebook Recovery Utility?
+          **Not supported on stock firmware.** Google's tool expects ChromeOS recovery images.
+          Use MrChromebox UEFI + Balena Etcher. See docs/CHROMEBOOK.md.
+
+          ## After boot
+          Set enrollment env on first boot or run install-pallet-os.sh with:
+          \`PALLET_SERVER_URL\` and \`PALLET_ENROLLMENT_TOKEN\`
+          EOF
+
+      - name: Upload workflow artifact (90 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pallet-os-chromebook-${{ github.sha }}
+          path: |
+            build/pallet-os-chromebook.img.zst
+            build/pallet-os-chromebook.img.zst.sha256
+            build/FLASHING.md
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Publish GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/pallet-os-chromebook.img.zst
+            build/pallet-os-chromebook.img.zst.sha256
+            build/FLASHING.md
+          generate_release_notes: true

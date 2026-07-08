@@ -11,10 +11,10 @@ On real Chromebook hardware, the supported path is:
 3. **Boot from USB** using a Pallet OS image built by `provision/build-chromebook-image.sh`.
 4. Complete first-boot provisioning (or pass enrollment env vars).
 
-Some Recovery Utility versions support **"Use local image"** for custom `.bin` images. Our build script produces a standard **UEFI USB image** (`pallet-os-chromebook.img`). You can:
+Some Recovery Utility versions support **"Use local image"** — but only after **MrChromebox UEFI** firmware, and results vary. **Balena Etcher is strongly recommended.**
 
-- Write with `dd` / Rufus / Balena Etcher (recommended), **or**
-- Use Recovery Utility local image if your version supports `.img`/converted `.bin`.
+- ✅ **Balena Etcher** — flash `pallet-os-chromebook.img` (from GitHub Releases)
+- ❌ **Chromebook Recovery Utility on stock firmware** — will not work (ChromeOS images only)
 
 ### Why MrChromebox?
 
@@ -28,20 +28,35 @@ Check your device on the [MrChromebox supported devices list](https://mrchromebo
 
 ## Quick install flow
 
+### Download from GitHub Releases (CI-built)
+
+1. **Actions** → **Build Chromebook USB image** runs on tags (`v1.0.0`) or manual dispatch
+2. Download from **Releases**: `pallet-os-chromebook.img.zst` + `.sha256`
+3. `zstd -d pallet-os-chromebook.img.zst`
+4. Flash with **Balena Etcher** → `pallet-os-chromebook.img`
+5. Boot Chromebook from USB (MrChromebox UEFI required)
+
 ```bash
-# On a build machine (Ubuntu):
+# Publish a release build:
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+### Or build locally
+
+```bash
 cd pallet-os
 sudo ./provision/build-chromebook-image.sh
-
-# Flash USB (replace sdX):
 sudo dd if=build/pallet-os-chromebook.img of=/dev/sdX bs=4M status=progress && sync
+```
 
-# On Chromebook: boot USB, first boot runs provisioner.
-# Or on running Ubuntu install:
-curl -fsSL https://raw.githubusercontent.com/your-org/pallet-os/main/provision/install-pallet-os.sh | sudo bash -s -- \
-  # with env:
-  PALLET_SERVER_URL=https://api.your-domain.com \
-  PALLET_ENROLLMENT_TOKEN=plt_...
+### After USB boot
+
+First boot runs the provisioner automatically. Or on an existing Ubuntu install:
+
+```bash
+export PALLET_SERVER_URL=https://api.your-domain.com
+export PALLET_ENROLLMENT_TOKEN=plt_...
+sudo ./provision/install-pallet-os.sh && sudo reboot
 ```
 
 ## Hardware notes
