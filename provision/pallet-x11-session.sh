@@ -23,7 +23,15 @@ xset -dpms 2>/dev/null || true
 xset s noblank 2>/dev/null || true
 xsetroot -solid "#1a1a2e" 2>/dev/null || true
 
-/usr/local/bin/pallet-x11-display >>"$LOG" 2>&1 || true
+if [[ -x /usr/local/bin/pallet-x11-display ]]; then
+  /usr/local/bin/pallet-x11-display >>"$LOG" 2>&1 || true
+else
+  # Fallback: set panel to auto without helper script
+  if command -v xrandr >/dev/null 2>&1; then
+    out="$(xrandr | awk '/ connected/{print $1; exit}')"
+    [[ -n "$out" ]] && xrandr --output "$out" --primary --auto 2>>"$LOG" || true
+  fi
+fi
 
 if ! pgrep -x pallet-shell >/dev/null 2>&1; then
   log "starting pallet-shell"
