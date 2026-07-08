@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Pallet OS
+Comment=ChromeOS-style managed desktop
+Exec=/usr/bin/labwc -c /home/pallet/.config/labwc/rc.xml
+Type=Application
+DesktopNames=PalletOS

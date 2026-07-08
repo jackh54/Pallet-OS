@@ -1,0 +1,34 @@
+services:
+  pallet-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8787:8787"
+    environment:
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: ${PALLET_ADMIN_PASSWORD:-pallet-dev-secret}
+      JWT_SECRET: ${PALLET_JWT_SECRET:-dev-jwt-secret-change-me}
+      JWT_ISSUER: pallet-os
+    volumes:
+      - pallet-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8787/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  pallet-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8787
+    ports:
+      - "3000:3000"
+    depends_on:
+      pallet-api:
+        condition: service_healthy
+
+volumes:
+  pallet-data:

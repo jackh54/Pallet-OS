@@ -1,0 +1,16 @@
+[Unit]
+Description=Pallet OS management agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pallet-agent -config /etc/pallet/agent.json
+Restart=always
+RestartSec=5
+Environment=PALLET_SERVER_URL=
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<labwc_config>
+  <focus>
+    <followMouse>no</followMouse>
+  </focus>
+  <keyboard>
+    <default />
+    <keybind key="A-Tab">
+      <action name="NextWindow" />
+    </keybind>
+    <keybind key="A-F4">
+      <action name="Close" />
+    </keybind>
+  </keyboard>
+  <mouse>
+    <default />
+  </mouse>
+  <windowSwitcher>
+    <outline>yes</outline>
+  </windowSwitcher>
+  <theme>
+    <name>default</name>
+    <cornerRadius>12</cornerRadius>
+    <font place="ActiveWindow">
+      <name>sans</name>
+      <size>10</size>
+    </font>
+  </theme>
+  <startup>
+    <command>pallet-shell</command>
+  </startup>
+</labwc_config>

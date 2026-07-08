@@ -1,0 +1,10 @@
+[terminal]
+command = greetd --config /etc/greetd/config.toml
+
+[default_session]
+command = labwc -c /home/pallet/.config/labwc/rc.xml
+user = pallet
+
+[initial_session]
+command = labwc -c /home/pallet/.config/labwc/rc.xml
+user = pallet
