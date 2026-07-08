@@ -27,6 +27,6 @@
     </font>
   </theme>
   <startup>
-    <command>pallet-shell</command>
+    <command>/usr/local/bin/pallet-shell-launch</command>
   </startup>
 </labwc_config>

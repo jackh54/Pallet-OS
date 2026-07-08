@@ -99,6 +99,7 @@ dpkg-reconfigure -plow unattended-upgrades || true
 echo "==> Building & installing pallet-shell"
 bash "$SCRIPT_DIR/build-shell.sh"
 install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
+install -m 0755 "$SCRIPT_DIR/pallet-shell-launch.sh" /usr/local/bin/pallet-shell-launch
 install -m 0755 "$SCRIPT_DIR/pallet-lock" /usr/local/bin/pallet-lock
 
 echo "==> Building & installing pallet-agent"
@@ -178,7 +179,7 @@ systemctl disable pallet-shell 2>/dev/null || true
 
 if [[ -n "$PALLET_ENROLLMENT_TOKEN" && -n "$PALLET_SERVER_URL" ]]; then
   echo "==> Enrolling device"
-  pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" -config /etc/pallet/agent.json || true
+  pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" -enroll-only -config /etc/pallet/agent.json
   systemctl enable --now pallet-agent || true
 else
   echo ""
