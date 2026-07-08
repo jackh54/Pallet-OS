@@ -11,7 +11,7 @@ JWT_ISSUER = "pallet-os"
 [[d1_databases]]
 binding = "DB"
 database_name = "pallet-os"
-database_id = "00000000-0000-0000-0000-000000000001"
+database_id = "ec24a1e0-e4c1-48ec-beee-c9234f9ecbea"
 
 [observability]
 enabled = true
