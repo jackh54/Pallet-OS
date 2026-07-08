@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   Cpu,
-  KeyRound,
   Laptop,
   Lock,
   LogOut,
@@ -14,6 +13,7 @@ import {
   Unlock,
 } from "lucide-react";
 import { api, Device, Policy } from "@/lib/api";
+import { EnrollPanel } from "@/components/EnrollPanel";
 
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
@@ -21,7 +21,6 @@ export default function HomePage() {
   const [password, setPassword] = useState("");
   const [devices, setDevices] = useState<Device[]>([]);
   const [policyText, setPolicyText] = useState("");
-  const [enrollToken, setEnrollToken] = useState<string | null>(null);
   const [selected, setSelected] = useState<Device | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,16 +75,6 @@ export default function HomePage() {
     const policy = JSON.parse(policyText);
     await api("/api/v1/admin/policy", { method: "PUT", body: JSON.stringify({ policy }) }, token);
     await refresh(token);
-  }
-
-  async function createEnrollToken() {
-    if (!token) return;
-    const out = await api<{ token: string }>(
-      "/api/v1/admin/enrollment-tokens",
-      { method: "POST", body: JSON.stringify({ label: "dashboard" }) },
-      token
-    );
-    setEnrollToken(out.token);
   }
 
   async function sendCommand(type: string, deviceId?: string) {
@@ -160,19 +149,11 @@ export default function HomePage() {
 
       {error && <div className="card p-4 text-rose-300">{error}</div>}
 
+      <EnrollPanel authToken={token!} />
+
       <section className="grid lg:grid-cols-2 gap-6">
         <div className="card p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Devices</h2>
-            <button className="btn-ghost text-sm" onClick={createEnrollToken}>
-              <KeyRound size={14} className="inline mr-1" />New enroll token
-            </button>
-          </div>
-          {enrollToken && (
-            <div className="rounded-xl bg-black/30 p-3 text-sm break-all">
-              Enrollment token: <code className="text-[color:var(--accent)]">{enrollToken}</code>
-            </div>
-          )}
+          <h2 className="text-lg font-medium">Devices</h2>
           <div className="space-y-2 max-h-[28rem] overflow-auto">
             {devices.map((d) => (
               <button
