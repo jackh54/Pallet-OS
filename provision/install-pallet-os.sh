@@ -3,7 +3,8 @@
 set -euo pipefail
 
 if [[ $EUID -ne 0 ]]; then
-  echo "Run as root: sudo $0"
+  echo "Run as root:"
+  echo "  sudo PALLET_SERVER_URL=https://api.example.com PALLET_ENROLLMENT_TOKEN=plt_... $0"
   exit 1
 fi
 
@@ -14,9 +15,41 @@ INSTALL_DIR="${INSTALL_DIR:-/opt/pallet}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Optional: read enrollment vars from a root-only file
+if [[ -f /etc/pallet/enroll.env ]]; then
+  # shellcheck disable=SC1091
+  source /etc/pallet/enroll.env
+fi
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --server) PALLET_SERVER_URL="$2"; shift 2 ;;
+    --token) PALLET_ENROLLMENT_TOKEN="$2"; shift 2 ;;
+    *) echo "Unknown arg: $1"; exit 1 ;;
+  esac
+done
+
+if findmnt -no fstype / 2>/dev/null | grep -qE 'overlay|squashfs'; then
+  echo ""
+  echo "╔════════════════════════════════════════════════════════════════╗"
+  echo "║  WARNING: Ubuntu LIVE session detected (Try Ubuntu).           ║"
+  echo "║  This install will NOT persist to your internal disk.          ║"
+  echo "║                                                                ║"
+  echo "║  Instead: choose 'Install Ubuntu' to your internal drive,      ║"
+  echo "║  reboot into the installed system, then run this script again.  ║"
+  echo "╚════════════════════════════════════════════════════════════════╝"
+  echo ""
+  read -r -p "Continue anyway on live USB? [y/N] " ans
+  [[ "${ans,,}" == "y" ]] || exit 1
+fi
+
 echo "==> Pallet OS provisioner (Ubuntu 24.04+ / Chromebook)"
 echo "    User: $PALLET_USER"
-echo "    Server: ${PALLET_SERVER_URL:-<not set>}"
+if [[ -n "$PALLET_SERVER_URL" ]]; then
+  echo "    Server: $PALLET_SERVER_URL"
+else
+  echo "    Server: <not set — enroll manually after install>"
+fi
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -25,7 +58,7 @@ apt-get update
 apt-get install -y \
   chromium-browser chromium-codecs-ffmpeg \
   labwc seatd swayidle swaylock \
-  network-manager nm-tray \
+  network-manager \
   pipewire wireplumber \
   xwayland \
   curl ca-certificates jq unzip \
@@ -33,6 +66,7 @@ apt-get install -y \
   policykit-1 \
   fonts-roboto fonts-noto-color-emoji \
   mesa-utils \
+  golang-go nodejs npm \
   linux-modules-extra-$(uname -r) || true
 
 echo "==> Chromebook hardware support"
@@ -43,8 +77,14 @@ if [[ -f "$SCRIPT_DIR/chromebook-modules.sh" ]]; then
 fi
 
 echo "==> Creating managed user"
+PALLET_GROUPS="video,input,render,audio"
+if getent group waydroid >/dev/null; then
+  PALLET_GROUPS="$PALLET_GROUPS,waydroid"
+fi
 if ! id "$PALLET_USER" &>/dev/null; then
-  useradd -m -s /bin/bash -G video,input,render,audio,waydroid "$PALLET_USER"
+  useradd -m -s /bin/bash -G "$PALLET_GROUPS" "$PALLET_USER"
+else
+  usermod -aG "$PALLET_GROUPS" "$PALLET_USER" 2>/dev/null || true
 fi
 echo "$PALLET_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reboot, /usr/bin/systemctl poweroff" > "/etc/sudoers.d/pallet"
 chmod 440 "/etc/sudoers.d/pallet"
@@ -95,6 +135,9 @@ systemctl enable greetd
 echo "==> Waydroid (Android apps)"
 if [[ -f "$SCRIPT_DIR/install-waydroid.sh" ]]; then
   bash "$SCRIPT_DIR/install-waydroid.sh" || echo "Waydroid install skipped or failed — see docs"
+  if getent group waydroid >/dev/null; then
+    usermod -aG waydroid "$PALLET_USER" 2>/dev/null || true
+  fi
 fi
 
 echo "==> Lockdown: hide terminal for managed user"
@@ -113,7 +156,15 @@ systemctl enable pallet-agent pallet-shell
 
 if [[ -n "$PALLET_ENROLLMENT_TOKEN" && -n "$PALLET_SERVER_URL" ]]; then
   echo "==> Enrolling device"
-  pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" || true
+  pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" -config /etc/pallet/agent.json || true
+  systemctl enable --now pallet-agent || true
+else
+  echo ""
+  echo "==> Enrollment skipped (server or token not set)"
+  echo "    After reboot, run:"
+  echo "    sudo PALLET_SERVER_URL=https://your-api.workers.dev \\"
+  echo "         PALLET_ENROLLMENT_TOKEN=plt_... \\"
+  echo "         $SCRIPT_DIR/enroll-device.sh"
 fi
 
 echo ""
