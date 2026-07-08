@@ -19,6 +19,20 @@ export interface ShellConfig {
   locked: boolean;
 }
 
+export interface DisplayOutput {
+  name: string;
+  connected: boolean;
+  primary: boolean;
+  current_mode?: string;
+  modes: string[];
+}
+
+export interface DisplayCurrent {
+  output?: string;
+  mode?: string;
+  scale?: number;
+}
+
 export interface SettingsData {
   current_agent: string;
   current_shell: string;
@@ -31,7 +45,21 @@ export interface SettingsData {
   hostname: string;
   wifi_ssid: string;
   battery_percent: number | null;
+  display_auto: boolean;
+  display_output?: string;
+  display_mode?: string;
+  display_scale: number;
+  display_outputs: DisplayOutput[];
+  display_current: DisplayCurrent;
 }
+
+export type SettingsPatch = Partial<{
+  auto_updates: boolean;
+  display_auto: boolean;
+  display_output: string;
+  display_mode: string;
+  display_scale: number;
+}>;
 
 export async function fetchConfig(): Promise<ShellConfig> {
   const res = await fetch("/api/config");
@@ -53,7 +81,7 @@ export async function fetchSettings(): Promise<SettingsData> {
   return res.json();
 }
 
-export async function saveSettings(patch: { auto_updates: boolean }): Promise<void> {
+export async function saveSettings(patch: SettingsPatch): Promise<void> {
   await fetch("/api/settings", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

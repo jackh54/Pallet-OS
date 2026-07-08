@@ -6,6 +6,7 @@ import {
   Monitor,
   RefreshCw,
   Settings as SettingsIcon,
+  Tv,
 } from "lucide-react";
 import {
   fetchSettings,
@@ -14,17 +15,26 @@ import {
   SettingsData,
 } from "./api";
 
-type Section = "about" | "updates" | "device";
+type Section = "about" | "updates" | "device" | "display";
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
-  const [section, setSection] = useState<Section>("updates");
+  const [section, setSection] = useState<Section>("display");
   const [data, setData] = useState<SettingsData | null>(null);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [displayOutput, setDisplayOutput] = useState("");
+  const [displayMode, setDisplayMode] = useState("");
+  const [displayScale, setDisplayScale] = useState(1);
+  const [displayAuto, setDisplayAuto] = useState(true);
 
   const load = async () => {
     try {
-      setData(await fetchSettings());
+      const s = await fetchSettings();
+      setData(s);
+      setDisplayAuto(s.display_auto ?? true);
+      setDisplayOutput(s.display_output || s.display_current?.output || "");
+      setDisplayMode(s.display_mode || s.display_current?.mode || "");
+      setDisplayScale(s.display_scale || 1);
     } catch {
       /* retry */
     }
@@ -57,7 +67,28 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const connectedOutputs = data?.display_outputs?.filter((o) => o.connected) ?? [];
+  const selectedOutput =
+    connectedOutputs.find((o) => o.name === displayOutput) ?? connectedOutputs[0];
+  const availableModes = selectedOutput?.modes ?? [];
+
+  const onApplyDisplay = async () => {
+    setSaving(true);
+    try {
+      await saveSettings({
+        display_auto: displayAuto,
+        display_output: displayOutput,
+        display_mode: displayMode,
+        display_scale: displayScale,
+      });
+      await load();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const nav: { id: Section; label: string; icon: ReactNode }[] = [
+    { id: "display", label: "Display", icon: <Tv size={18} /> },
     { id: "updates", label: "Software updates", icon: <Download size={18} /> },
     { id: "about", label: "About Pallet OS", icon: <Info size={18} /> },
     { id: "device", label: "Device", icon: <Monitor size={18} /> },
@@ -95,6 +126,124 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <main className="flex-1 p-8 overflow-y-auto">
           {!data ? (
             <p className="text-chrome-muted">Loading settings…</p>
+          ) : section === "display" ? (
+            <div className="space-y-6 max-w-lg">
+              <div>
+                <h2 className="text-2xl font-medium mb-1">Display</h2>
+                <p className="text-chrome-muted text-sm">
+                  Configure panel resolution and scaling. Use manual mode if auto-detect fails.
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">Automatic detection</div>
+                    <div className="text-sm text-chrome-muted">Use native panel resolution from hardware</div>
+                  </div>
+                  <button
+                    onClick={() => setDisplayAuto(!displayAuto)}
+                    className={`w-12 h-7 rounded-full transition relative ${
+                      displayAuto ? "bg-chrome-accent" : "bg-white/20"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
+                        displayAuto ? "left-5" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {!displayAuto && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm text-chrome-muted">Output</label>
+                      <select
+                        value={displayOutput}
+                        onChange={(e) => {
+                          setDisplayOutput(e.target.value);
+                          const out = connectedOutputs.find((o) => o.name === e.target.value);
+                          if (out?.modes?.[0]) setDisplayMode(out.modes[0]);
+                        }}
+                        className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm"
+                      >
+                        {connectedOutputs.length === 0 && (
+                          <option value="">No outputs detected</option>
+                        )}
+                        {connectedOutputs.map((o) => (
+                          <option key={o.name} value={o.name}>
+                            {o.name}
+                            {o.current_mode ? ` (${o.current_mode})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm text-chrome-muted">Resolution</label>
+                      <select
+                        value={displayMode}
+                        onChange={(e) => setDisplayMode(e.target.value)}
+                        className="w-full rounded-xl bg-black/30 border border-white/10 px-3 py-2.5 text-sm"
+                      >
+                        {availableModes.length === 0 && (
+                          <option value={displayMode}>{displayMode || "—"}</option>
+                        )}
+                        {availableModes.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm text-chrome-muted">Scale ({displayScale.toFixed(2)}×)</label>
+                      <input
+                        type="range"
+                        min={0.75}
+                        max={2}
+                        step={0.05}
+                        value={displayScale}
+                        onChange={(e) => setDisplayScale(parseFloat(e.target.value))}
+                        className="w-full"
+                      />
+                      <div className="flex gap-2 text-xs text-chrome-muted">
+                        {[0.75, 1, 1.25, 1.5, 2].map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => setDisplayScale(s)}
+                            className="rounded-lg px-2 py-1 bg-white/10 hover:bg-white/15"
+                          >
+                            {s}×
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="text-sm space-y-2 pt-2 border-t border-white/10">
+                  <div className="flex justify-between">
+                    <span className="text-chrome-muted">Current</span>
+                    <span>
+                      {data.display_current?.output || "—"}{" "}
+                      {data.display_current?.mode || ""}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={onApplyDisplay}
+                  disabled={saving}
+                  className="flex items-center gap-2 rounded-xl bg-chrome-accent text-black px-4 py-2.5 font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  <RefreshCw size={16} className={saving ? "animate-spin" : ""} />
+                  {saving ? "Applying…" : "Apply display settings"}
+                </button>
+              </div>
+            </div>
           ) : section === "updates" ? (
             <div className="space-y-6 max-w-lg">
               <div>
