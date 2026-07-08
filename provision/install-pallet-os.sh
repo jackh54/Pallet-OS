@@ -104,6 +104,14 @@ install -m 0755 "$SCRIPT_DIR/pallet-lock" /usr/local/bin/pallet-lock
 echo "==> Building & installing pallet-agent"
 bash "$SCRIPT_DIR/build-agent.sh"
 install -m 0755 "$REPO_ROOT/dist/pallet-agent" /usr/local/bin/pallet-agent
+install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
+mkdir -p /var/lib/pallet
+cat > /var/lib/pallet/versions.json <<EOF
+{
+  "agent": "1.0.0",
+  "shell": "1.0.0"
+}
+EOF
 mkdir -p /etc/pallet /var/lib/pallet
 chmod 700 /etc/pallet
 

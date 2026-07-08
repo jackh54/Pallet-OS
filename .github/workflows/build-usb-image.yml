@@ -16,6 +16,37 @@ permissions:
   contents: write
 
 jobs:
+  build-binaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build agent and shell
+        env:
+          PALLET_VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          export PALLET_VERSION="$VERSION"
+          bash provision/build-agent.sh
+          bash provision/build-shell.sh
+          cp dist/pallet-agent dist/pallet-agent-linux-amd64
+          cp dist/pallet-shell dist/pallet-shell-linux-amd64
+          sha256sum dist/pallet-agent-linux-amd64 dist/pallet-shell-linux-amd64 > dist/binaries.sha256
+          ls -lh dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pallet-binaries
+          path: |
+            dist/pallet-agent-linux-amd64
+            dist/pallet-shell-linux-amd64
+            dist/binaries.sha256
+          if-no-files-found: error
+
   build-image:
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -95,3 +126,22 @@ jobs:
             build/pallet-os-chromebook.img.zst.sha256
             build/FLASHING.md
           generate_release_notes: true
+
+  publish-release:
+    needs: [build-binaries, build-image]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pallet-binaries
+          path: dist/
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            dist/pallet-agent-linux-amd64
+            dist/pallet-shell-linux-amd64
+            dist/binaries.sha256

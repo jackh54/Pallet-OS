@@ -36,6 +36,12 @@ export interface PalletPolicy {
     show_terminal?: boolean;
     launcher_apps?: LauncherApp[];
   };
+  updates?: {
+    enabled?: boolean;
+    auto?: boolean;
+    github_repo?: string;
+    channel?: string;
+  };
 }
 
 export interface LauncherApp {
@@ -76,7 +82,8 @@ export type CommandType =
   | "restart_shell"
   | "install_app"
   | "remove_app"
-  | "apply_policy";
+  | "apply_policy"
+  | "check_updates";
 
 export interface CommandPayload {
   app_id?: string;
@@ -120,5 +127,11 @@ export const DEFAULT_POLICY: PalletPolicy = {
         pinned: false,
       },
     ],
+  },
+  updates: {
+    enabled: true,
+    auto: true,
+    github_repo: "jackh54/Pallet-OS",
+    channel: "latest",
   },
 };

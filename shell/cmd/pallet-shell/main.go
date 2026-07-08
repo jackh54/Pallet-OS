@@ -19,6 +19,9 @@ import (
 //go:embed dist/*
 var staticFS embed.FS
 
+var shellVersion = "1.0.0"
+var agentVersionLabel = "1.0.0"
+
 type ShellApp struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
@@ -64,6 +67,8 @@ func main() {
 	mux.HandleFunc("/api/config", handleConfig)
 	mux.HandleFunc("/api/launch", handleLaunch)
 	mux.HandleFunc("/api/launcher", handleLauncher)
+	mux.HandleFunc("/api/settings", handleSettings)
+	mux.HandleFunc("/api/settings/check-updates", handleCheckUpdates)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" && !strings.Contains(r.URL.Path, ".") {
 			r.URL.Path = "/"
@@ -118,6 +123,93 @@ func handleLaunch(w http.ResponseWriter, r *http.Request) {
 
 func handleLauncher(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true})
+}
+
+type SettingsResponse struct {
+	CurrentAgent    string `json:"current_agent"`
+	CurrentShell    string `json:"current_shell"`
+	LatestVersion   string `json:"latest_version"`
+	UpdateAvailable bool   `json:"update_available"`
+	LastMessage     string `json:"last_message"`
+	LastError       string `json:"last_error,omitempty"`
+	AutoUpdates     bool   `json:"auto_updates"`
+	CheckedAt       string `json:"checked_at"`
+	Hostname        string `json:"hostname"`
+	WifiSSID        string `json:"wifi_ssid"`
+	BatteryPercent  *int   `json:"battery_percent"`
+}
+
+func handleSettings(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, loadSettings())
+	case http.MethodPut:
+		var body struct {
+			AutoUpdates bool `json:"auto_updates"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		_ = os.MkdirAll("/var/lib/pallet", 0o755)
+		raw, _ := json.MarshalIndent(map[string]bool{"auto_updates": body.AutoUpdates}, "", "  ")
+		_ = os.WriteFile("/var/lib/pallet/settings.json", raw, 0o644)
+		writeJSON(w, loadSettings())
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleCheckUpdates(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	_ = os.MkdirAll("/var/lib/pallet", 0o755)
+	_ = os.WriteFile("/var/lib/pallet/force-update-check", []byte("1"), 0o644)
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func loadSettings() SettingsResponse {
+	out := SettingsResponse{
+		CurrentAgent: agentVersionLabel,
+		CurrentShell: shellVersion,
+		AutoUpdates:  true,
+	}
+	if data, err := os.ReadFile("/var/lib/pallet/update-status.json"); err == nil {
+		var status map[string]any
+		if json.Unmarshal(data, &status) == nil {
+			out.CurrentAgent = strVal(status["current_agent"], out.CurrentAgent)
+			out.CurrentShell = strVal(status["current_shell"], out.CurrentShell)
+			out.LatestVersion = strVal(status["latest_version"], "")
+			out.UpdateAvailable, _ = status["update_available"].(bool)
+			out.LastMessage = strVal(status["last_message"], "")
+			out.LastError = strVal(status["last_error"], "")
+			out.CheckedAt = strVal(status["checked_at"], "")
+			if v, ok := status["auto_updates"].(bool); ok {
+				out.AutoUpdates = v
+			}
+		}
+	}
+	if data, err := os.ReadFile("/var/lib/pallet/settings.json"); err == nil {
+		var s struct {
+			AutoUpdates bool `json:"auto_updates"`
+		}
+		if json.Unmarshal(data, &s) == nil {
+			out.AutoUpdates = s.AutoUpdates
+		}
+	}
+	out.Hostname, _ = os.Hostname()
+	out.WifiSSID = wifiSSID()
+	out.BatteryPercent = batteryPercent()
+	return out
+}
+
+func strVal(v any, fallback string) string {
+	if s, ok := v.(string); ok && s != "" {
+		return s
+	}
+	return fallback
 }
 
 func buildConfig() ShellConfig {

@@ -161,7 +161,11 @@ Example Chromium policy fragment in global policy:
 
 ## OS updates
 
-Unattended security upgrades via `unattended-upgrades` (provisioner enables). Agent and shell update via your own package pipeline or re-run provisioner with new binaries.
+- **Pallet agent + shell** — automatic GitHub Release OTA (enabled by default). Devices check every 6h; use **Settings → Software updates** on the shelf to toggle auto-update or check manually.
+- **Policy / browser rules** — pushed from your dashboard within ~30s.
+- **Ubuntu security patches** — `unattended-upgrades` on device.
+
+Publish a new device update: `git tag v1.1.0 && git push origin v1.1.0` (builds binaries + USB image on GitHub Releases).
 
 ## Known limitations
 
