@@ -1,10 +1,13 @@
+# greetd configuration for Pallet OS
+# See: man greetd.conf
+
 [terminal]
-command = greetd --config /etc/greetd/config.toml
+vt = 1
 
 [default_session]
-command = labwc -c /home/pallet/.config/labwc/rc.xml
-user = pallet
+command = "/usr/bin/labwc -c /home/pallet/.config/labwc/rc.xml"
+user = "pallet"
 
 [initial_session]
-command = labwc -c /home/pallet/.config/labwc/rc.xml
-user = pallet
+command = "/usr/bin/labwc -c /home/pallet/.config/labwc/rc.xml"
+user = "pallet"

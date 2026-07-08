@@ -143,13 +143,15 @@ done
 if [[ -e /etc/systemd/system/display-manager.service ]]; then
   rm -f /etc/systemd/system/display-manager.service
 fi
-DEBIAN_FRONTEND=noninteractive apt-get install -y greetd
+DEBIAN_FRONTEND=noninteractive apt-get install -y greetd seatd
 install -m 0644 "$SCRIPT_DIR/greetd/config.toml" /etc/greetd/config.toml
 systemctl daemon-reload
+systemctl enable --now seatd
 systemctl enable greetd
 ln -sf /lib/systemd/system/greetd.service /etc/systemd/system/display-manager.service
 usermod -aG seat,video,input,render,audio "$PALLET_USER" 2>/dev/null || true
-systemctl enable seatd 2>/dev/null || true
+# pallet-shell is started by labwc rc.xml — systemd unit conflicts with greetd session
+systemctl disable pallet-shell 2>/dev/null || true
 
 echo "==> Waydroid (Android apps)"
 if [[ -f "$SCRIPT_DIR/install-waydroid.sh" ]]; then
@@ -171,7 +173,8 @@ for svc in cups bluetooth avahi-daemon gdm3 gdm; do
 done
 
 systemctl daemon-reload
-systemctl enable pallet-agent pallet-shell
+systemctl enable pallet-agent
+systemctl disable pallet-shell 2>/dev/null || true
 
 if [[ -n "$PALLET_ENROLLMENT_TOKEN" && -n "$PALLET_SERVER_URL" ]]; then
   echo "==> Enrolling device"
