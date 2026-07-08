@@ -184,6 +184,7 @@ if [[ -e /etc/systemd/system/display-manager.service ]]; then
   rm -f /etc/systemd/system/display-manager.service
 fi
 DEBIAN_FRONTEND=noninteractive apt-get install -y greetd seatd
+bash "$SCRIPT_DIR/greetd-seat.sh"
 install -m 0644 "$SCRIPT_DIR/greetd/config.toml" /etc/greetd/config.toml
 systemctl daemon-reload
 systemctl enable --now seatd

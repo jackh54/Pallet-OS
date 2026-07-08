@@ -125,6 +125,39 @@ sudo reboot
 
 ---
 
+## Black screen: Permission denied on /dev/dri/card0 (AMD)
+
+If `session.log` shows:
+
+```
+Failed to open DRM node '/dev/dri/card0': Permission denied
+Failed to initialize EGL context
+graphics mode: hardware
+```
+
+The GPU driver loaded (`amdgpu` in dmesg is fine) but **greetd did not hand GPU access to labwc**.
+
+**Immediate fix** (skip `seat` if that group doesn't exist on Ubuntu):
+
+```bash
+sudo groupadd seat 2>/dev/null || true
+sudo usermod -aG render,video,input pallet
+getent group seat >/dev/null && sudo usermod -aG seat pallet
+sudo mkdir -p /etc/pallet
+sudo touch /etc/pallet/force-software-rendering
+sudo reboot
+```
+
+**Full fix:**
+
+```bash
+cd ~/Pallet-OS && git pull
+sudo ./provision/install-pallet-os.sh
+sudo reboot
+```
+
+---
+
 ## AMD audio errors (acp3x-alc5682-max98357 / DMIC gpio err=-2)
 
 These messages are **audio/microphone only** — they do **not** cause the black screen:
