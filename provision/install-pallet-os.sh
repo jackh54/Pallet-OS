@@ -97,6 +97,9 @@ Unattended-Upgrade::Remove-Unused-Dependencies "true";
 EOF
 dpkg-reconfigure -plow unattended-upgrades || true
 
+echo "==> WiFi auto-connect on boot"
+bash "$SCRIPT_DIR/network-wifi.sh"
+
 echo "==> Building & installing pallet-shell"
 bash "$SCRIPT_DIR/build-shell.sh"
 install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell

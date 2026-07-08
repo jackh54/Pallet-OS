@@ -1,7 +1,7 @@
 [Unit]
 Description=Pallet OS management agent
-After=network-online.target
-Wants=network-online.target
+After=network-online.target pallet-wifi.service NetworkManager.service
+Wants=network-online.target pallet-wifi.service
 
 [Service]
 Type=simple

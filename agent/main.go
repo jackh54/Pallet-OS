@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -200,7 +202,7 @@ func (a *Agent) api(method, path string, body any, out any) error {
 	req.Header.Set("X-Device-Key", a.cfg.DeviceKey)
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return err
+		return wrapNetworkError(err)
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
@@ -226,7 +228,7 @@ func enroll(cfg *Config, token string) error {
 	raw, _ := json.Marshal(payload)
 	resp, err := http.Post(cfg.ServerURL+"/api/v1/device/enroll", "application/json", bytes.NewReader(raw))
 	if err != nil {
-		return err
+		return wrapNetworkError(err)
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
@@ -266,6 +268,29 @@ func saveConfig(path string, cfg *Config) error {
 		return err
 	}
 	return os.WriteFile(path, raw, 0o600)
+}
+
+func wrapNetworkError(err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "server misbehaving"),
+		strings.Contains(msg, "no such host"),
+		strings.Contains(msg, "name or service not known"),
+		strings.Contains(msg, "network is unreachable"),
+		strings.Contains(msg, "i/o timeout"),
+		dnsIsDown(err):
+		return fmt.Errorf("%w (no internet — connect WiFi: sudo pallet-connect-wifi \"SSID\" \"password\")", err)
+	default:
+		return err
+	}
+}
+
+func dnsIsDown(err error) bool {
+	var dnsErr *net.DNSError
+	return errors.As(err, &dnsErr)
 }
 
 func resolveServerURL(flagURL, configURL string) string {

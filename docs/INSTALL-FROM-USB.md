@@ -89,6 +89,42 @@ Create a **new** enroll token in the dashboard (old one may be used).
 
 ---
 
+## WiFi not connecting on boot / heartbeat "server misbehaving"
+
+That error means **no internet** (usually WiFi didn't auto-connect).
+
+**Connect and save WiFi once:**
+
+```bash
+sudo pallet-connect-wifi "YourNetworkName" "YourPassword"
+```
+
+Or without the helper:
+
+```bash
+nmcli device wifi connect "YourNetworkName" password "YourPassword"
+```
+
+Then reboot — it should reconnect automatically.
+
+**Check WiFi status:**
+
+```bash
+nmcli device status
+nmcli connection show --active
+sudo tail -20 /var/log/pallet/wifi.log
+```
+
+**Re-apply WiFi auto-connect fix:**
+
+```bash
+cd ~/Pallet-OS && git pull
+sudo ./provision/install-pallet-os.sh
+sudo reboot
+```
+
+---
+
 ## Black screen after reboot (mouse cursor, no desktop)
 
 The shelf is a web UI — a browser must open it. If you only see a mouse cursor:
