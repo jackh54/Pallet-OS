@@ -19,13 +19,13 @@ done
 echo "==> X11 + browsers + display tools"
 export DEBIAN_FRONTEND=noninteractive
 apt-get install -y \
-  xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
-  xserver-xorg-video-amdgpu xserver-xorg-legacy \
+  xserver-xorg-core xinit x11-xserver-utils x11-utils xserver-xorg-video-all \
+  xserver-xorg-video-amdgpu xserver-xorg-legacy dbus-x11 \
   epiphany-browser firefox \
   2>/dev/null || true
 apt-get install -y \
-  xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
-  xserver-xorg-video-amdgpu epiphany-browser \
+  xserver-xorg-core xinit x11-xserver-utils x11-utils xserver-xorg-video-all \
+  xserver-xorg-video-amdgpu epiphany-browser dbus-x11 \
   2>/dev/null || true
 
 # Remove any broken Xorg snippets from earlier releases (invalid Modes "auto" etc.)
