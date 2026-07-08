@@ -99,6 +99,7 @@ dpkg-reconfigure -plow unattended-upgrades || true
 echo "==> Building & installing pallet-shell"
 bash "$SCRIPT_DIR/build-shell.sh"
 install -m 0755 "$REPO_ROOT/dist/pallet-shell" /usr/local/bin/pallet-shell
+install -m 0755 "$SCRIPT_DIR/pallet-shell-launch.sh" /usr/local/bin/pallet-shell-launch
 install -m 0755 "$SCRIPT_DIR/pallet-lock" /usr/local/bin/pallet-lock
 
 echo "==> Building & installing pallet-agent"
