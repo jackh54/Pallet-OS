@@ -178,7 +178,7 @@ systemctl disable pallet-shell 2>/dev/null || true
 
 if [[ -n "$PALLET_ENROLLMENT_TOKEN" && -n "$PALLET_SERVER_URL" ]]; then
   echo "==> Enrolling device"
-  pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" -config /etc/pallet/agent.json || true
+  pallet-agent -server "$PALLET_SERVER_URL" -enroll "$PALLET_ENROLLMENT_TOKEN" -enroll-only -config /etc/pallet/agent.json
   systemctl enable --now pallet-agent || true
 else
   echo ""

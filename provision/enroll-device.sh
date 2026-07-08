@@ -31,5 +31,5 @@ EOF
   chmod 600 /etc/pallet/agent.json
 fi
 
-pallet-agent -server "$SERVER_URL" -enroll "$ENROLL_TOKEN" -config /etc/pallet/agent.json
+pallet-agent -server "$SERVER_URL" -enroll "$ENROLL_TOKEN" -enroll-only -config /etc/pallet/agent.json
 systemctl enable --now pallet-agent
