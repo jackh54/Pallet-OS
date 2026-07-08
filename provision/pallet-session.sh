@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# greetd session entrypoint — sets up env and starts labwc.
+# greetd session entrypoint — sets up env and starts labwc (or X11 fallback).
 set -euo pipefail
 
 PALLET_USER="${PALLET_USER:-pallet}"
@@ -22,8 +22,16 @@ mkdir -p "$LOG_DIR"
 exec >>"$LOG_DIR/session.log" 2>&1
 echo "$(date -Is) pallet-session starting (uid=$(id -u), wayland=${WAYLAND_DISPLAY:-unset}, groups=$(id -Gn))"
 
-# shellcheck disable=SC1091
-source /usr/local/bin/pallet-graphics-env
-echo "$(date -Is) graphics mode: ${PALLET_SOFTWARE_RENDERING:+software}${PALLET_SOFTWARE_RENDERING:-hardware} seatd=${LIBSEAT_BACKEND:-unset}"
+if /usr/local/bin/pallet-drm-setup; then
+  echo "$(date -Is) DRM ready: ${PALLET_DRM_CARD:-unknown}"
+  # shellcheck disable=SC1091
+  source /usr/local/bin/pallet-graphics-env
+  echo "$(date -Is) graphics mode: ${PALLET_SOFTWARE_RENDERING:+software}${PALLET_SOFTWARE_RENDERING:-hardware} seatd=${LIBSEAT_BACKEND:-unset}"
+  exec dbus-run-session -- /usr/bin/labwc -c "$PALLET_HOME/.config/labwc/rc.xml"
+fi
 
-exec dbus-run-session -- /usr/bin/labwc -c "$PALLET_HOME/.config/labwc/rc.xml"
+echo "$(date -Is) DRM unavailable — falling back to X11"
+export XDG_SESSION_TYPE=x11
+export GDK_BACKEND=x11
+unset MOZ_ENABLE_WAYLAND
+exec startx /usr/local/bin/pallet-x11-session -- :0 vt1 -keeptty -nolisten tcp

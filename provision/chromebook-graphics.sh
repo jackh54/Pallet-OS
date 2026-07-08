@@ -9,6 +9,13 @@ echo "==> Chromebook graphics support"
 if lspci 2>/dev/null | grep -qiE 'vga|display.*amd'; then
   echo "    Detected AMD GPU"
   apt-get install -y firmware-amd-graphics mesa-vulkan-drivers libgl1-mesa-dri libegl1-mesa-dri mesa-utils 2>/dev/null || true
+  install -m 0644 /dev/stdin /etc/modules-load.d/pallet-amdgpu.conf <<'EOF'
+amdgpu
+EOF
+  install -m 0644 /dev/stdin /etc/modprobe.d/pallet-amdgpu.conf <<'EOF'
+# Load AMD GPU for KMS/DRM on Chromebooks. Do NOT set amdgpu.dpm=0 (causes black screen).
+options amdgpu dc=1
+EOF
 elif lspci 2>/dev/null | grep -qiE 'vga|display.*intel'; then
   echo "    Detected Intel GPU"
   apt-get install -y \

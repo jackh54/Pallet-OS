@@ -125,6 +125,36 @@ sudo reboot
 
 ---
 
+## Black screen: DRM device missing
+
+If install or `session.log` says **DRM device missing** or `no /dev/dri/card*`, the GPU driver did not create a display device. labwc cannot draw anything without it.
+
+**Try now from TTY:**
+
+```bash
+sudo modprobe amdgpu
+ls -l /dev/dri/
+```
+
+If `card0` appears after `modprobe amdgpu`, make it permanent and reboot:
+
+```bash
+echo amdgpu | sudo tee /etc/modules-load.d/amdgpu.conf
+sudo reboot
+```
+
+**Full fix from repo:**
+
+```bash
+cd ~/Pallet-OS && git pull
+sudo ./provision/install-pallet-os.sh
+sudo reboot
+```
+
+The provisioner now loads `amdgpu` at boot, waits for DRM, and falls back to **X11** if Wayland still cannot start.
+
+---
+
 ## Black screen: Permission denied on /dev/dri/card0 (AMD)
 
 If `session.log` shows:
