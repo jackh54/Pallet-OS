@@ -5,9 +5,9 @@
 vt = 1
 
 [default_session]
-command = "/usr/bin/labwc -c /home/pallet/.config/labwc/rc.xml"
+command = "/usr/local/bin/pallet-session"
 user = "pallet"
 
 [initial_session]
-command = "/usr/bin/labwc -c /home/pallet/.config/labwc/rc.xml"
+command = "/usr/local/bin/pallet-session"
 user = "pallet"

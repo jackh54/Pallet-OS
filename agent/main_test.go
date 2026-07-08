@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"net"
+	"strings"
 	"testing"
 )
 
@@ -46,5 +49,19 @@ func TestResolveServerURLDevDefault(t *testing.T) {
 	t.Setenv("PALLET_SERVER_URL", "")
 	if got := resolveServerURL("", ""); got != "http://127.0.0.1:8787" {
 		t.Fatalf("resolveServerURL() = %q, want dev default", got)
+	}
+}
+
+func TestWrapNetworkError(t *testing.T) {
+	err := wrapNetworkError(&net.DNSError{Err: "server misbehaving", Name: "api.example.com"})
+	if err == nil || !strings.Contains(err.Error(), "pallet-connect-wifi") {
+		t.Fatalf("expected wifi hint, got %v", err)
+	}
+}
+
+func TestWrapNetworkErrorPassthrough(t *testing.T) {
+	base := errors.New("http 500")
+	if got := wrapNetworkError(base); !errors.Is(got, base) {
+		t.Fatalf("expected passthrough, got %v", got)
 	}
 }

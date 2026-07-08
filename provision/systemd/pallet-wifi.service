@@ -1,0 +1,14 @@
+[Unit]
+Description=Pallet OS WiFi auto-connect
+DefaultDependencies=no
+After=NetworkManager.service
+Before=network-online.target
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pallet-wifi-up
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
