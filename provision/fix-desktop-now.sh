@@ -12,19 +12,21 @@ PALLET_USER="${PALLET_USER:-pallet}"
 
 echo "==> Installing Pallet desktop scripts"
 for script in pallet-session.sh pallet-drm-setup.sh pallet-x11-session.sh \
-  pallet-shell-launch.sh pallet-graphics-env.sh pallet-lock; do
+  pallet-x11-display.sh pallet-shell-launch.sh pallet-graphics-env.sh pallet-lock; do
   install -m 0755 "$SCRIPT_DIR/$script" "/usr/local/bin/${script%.sh}"
 done
 
-echo "==> X11 + seat packages"
+echo "==> X11 + browsers + display tools"
 export DEBIAN_FRONTEND=noninteractive
 apt-get install -y \
   xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
   xserver-xorg-video-amdgpu xserver-xorg-legacy \
+  x11-xserver-utils xdotool \
+  epiphany-browser firefox \
   2>/dev/null || \
 apt-get install -y \
   xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
-  xserver-xorg-video-amdgpu
+  xserver-xorg-video-amdgpu epiphany-browser firefox
 
 install -m 0644 "$SCRIPT_DIR/xorg/Xwrapper.config" /etc/X11/Xwrapper.config
 install -m 0644 "$SCRIPT_DIR/xorg/20-amdgpu.conf" /etc/X11/xorg.conf.d/20-amdgpu.conf
@@ -53,7 +55,7 @@ fi
 
 echo "==> Verify installed desktop files"
 missing=0
-for bin in pallet-session pallet-drm-setup pallet-x11-session pallet-shell-launch pallet-graphics-env; do
+for bin in pallet-session pallet-drm-setup pallet-x11-session pallet-x11-display pallet-shell-launch pallet-graphics-env; do
   if [[ -x "/usr/local/bin/$bin" ]]; then
     echo "    OK /usr/local/bin/$bin"
   else
@@ -61,6 +63,13 @@ for bin in pallet-session pallet-drm-setup pallet-x11-session pallet-shell-launc
     missing=1
   fi
 done
+
+if command -v snap >/dev/null && snap list chromium &>/dev/null; then
+  snap connect chromium:x11 2>/dev/null || true
+  snap connect chromium:network 2>/dev/null || true
+  snap connect chromium:home 2>/dev/null || true
+  snap connect chromium:audio-playback 2>/dev/null || true
+fi
 
 systemctl enable --now seatd greetd 2>/dev/null || true
 systemctl restart greetd 2>/dev/null || true
