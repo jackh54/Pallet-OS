@@ -62,6 +62,7 @@ apt-get install -y \
   network-manager \
   pipewire wireplumber \
   xwayland \
+  xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
   curl ca-certificates jq unzip \
   unattended-upgrades apt-listchanges \
   policykit-1 \

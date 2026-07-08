@@ -33,4 +33,8 @@ fi
 
 echo "    pallet groups: $(id -Gn "$PALLET_USER" 2>/dev/null || echo unknown)"
 echo "    seatd socket: $(ls -l /run/seatd.sock 2>/dev/null || echo missing)"
-echo "    DRM device: $(ls -l /dev/dri/card0 2>/dev/null || echo missing)"
+if ls /dev/dri/card* >/dev/null 2>&1; then
+  echo "    DRM devices: $(ls -1 /dev/dri/card* 2>/dev/null | tr '\n' ' ')"
+else
+  echo "    DRM devices: missing (run: sudo modprobe amdgpu && ls -l /dev/dri/)"
+fi
