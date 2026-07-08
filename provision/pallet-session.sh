@@ -69,7 +69,13 @@ run_x11() {
   modprobe amdgpu 2>/dev/null || true
 
   log "starting X11 via startx"
-  startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1
+  if ! startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1; then
+    log "startx failed — retrying without custom xorg snippets"
+    mv /etc/X11/xorg.conf.d/20-amdgpu.conf /etc/X11/xorg.conf.d/20-amdgpu.conf.bak 2>/dev/null || true
+    startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1 || true
+    [[ -f /etc/X11/xorg.conf.d/20-amdgpu.conf.bak ]] && \
+      mv /etc/X11/xorg.conf.d/20-amdgpu.conf.bak /etc/X11/xorg.conf.d/20-amdgpu.conf 2>/dev/null || true
+  fi
   log "X11 exited with $?"
   cleanup_x11
   return 0

@@ -21,14 +21,18 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get install -y \
   xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
   xserver-xorg-video-amdgpu xserver-xorg-legacy \
-  x11-xserver-utils xdotool \
   epiphany-browser firefox \
-  2>/dev/null || \
+  2>/dev/null || true
 apt-get install -y \
   xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
-  xserver-xorg-video-amdgpu epiphany-browser firefox
+  xserver-xorg-video-amdgpu epiphany-browser \
+  2>/dev/null || true
+
+# Remove any broken Xorg snippets from earlier releases (invalid Modes "auto" etc.)
+rm -f /etc/X11/xorg.conf.d/20-amdgpu.conf.dpkg-bak 2>/dev/null || true
 
 install -m 0644 "$SCRIPT_DIR/xorg/Xwrapper.config" /etc/X11/Xwrapper.config
+mkdir -p /etc/X11/xorg.conf.d
 install -m 0644 "$SCRIPT_DIR/xorg/20-amdgpu.conf" /etc/X11/xorg.conf.d/20-amdgpu.conf
 
 bash "$SCRIPT_DIR/greetd-seat.sh" || true
