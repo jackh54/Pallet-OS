@@ -1,0 +1,31 @@
+{
+  "name": "pallet-os-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:node": "tsx src/local-server.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 execute pallet-os --local --file=./schema.sql",
+    "db:migrate:remote": "wrangler d1 execute pallet-os --remote --file=./schema.sql",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.0",
+    "better-sqlite3": "^11.9.1",
+    "hono": "^4.7.5",
+    "jose": "^6.0.10"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260706.1",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9",
+    "wrangler": "^4.4.0"
+  }
+}

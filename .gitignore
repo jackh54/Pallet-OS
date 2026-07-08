@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.next/
+.wrangler/
+.dev.vars
+*.db
+*.log
+.DS_Store
+.env
+.env.local
+server/.dev.vars
+dashboard/.env.local
+shell/frontend/dist/
+shell/cmd/pallet-shell/dist/
+agent/pallet-agent
+*.img

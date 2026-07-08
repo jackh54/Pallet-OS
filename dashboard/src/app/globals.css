@@ -1,0 +1,42 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+:root {
+  --bg: #0b0f14;
+  --panel: #121821;
+  --border: #1f2a37;
+  --accent: #4f8cff;
+  --text: #e8edf5;
+  --muted: #8b98a9;
+}
+
+body {
+  background: radial-gradient(circle at top, #152033 0%, var(--bg) 45%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.card {
+  @apply rounded-2xl border border-[color:var(--border)] bg-[color:var(--panel)] shadow-xl;
+}
+
+.input {
+  @apply w-full rounded-xl border border-[color:var(--border)] bg-black/20 px-3 py-2 outline-none focus:border-[color:var(--accent)];
+}
+
+.btn {
+  @apply rounded-xl px-4 py-2 font-medium transition hover:opacity-90 disabled:opacity-50;
+}
+
+.btn-primary {
+  @apply btn bg-[color:var(--accent)] text-white;
+}
+
+.btn-danger {
+  @apply btn bg-rose-600 text-white;
+}
+
+.btn-ghost {
+  @apply btn bg-white/5 hover:bg-white/10;
+}

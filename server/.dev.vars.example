@@ -1,0 +1,2 @@
+ADMIN_PASSWORD=pallet-dev-secret
+JWT_SECRET=dev-jwt-secret-change-me-in-production

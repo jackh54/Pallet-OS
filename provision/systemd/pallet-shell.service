@@ -1,0 +1,16 @@
+[Unit]
+Description=Pallet OS desktop shell
+After=graphical-session.target network.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+User=pallet
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+ExecStart=/usr/local/bin/pallet-shell
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target
