@@ -125,6 +125,28 @@ sudo reboot
 
 ---
 
+## Black screen / blinking cursor (full fix)
+
+One command — installs all desktop scripts, fixes seat/DRM, enables X11 fallback:
+
+```bash
+cd ~/Pallet-OS && git pull
+sudo ./provision/fix-desktop-now.sh
+sudo reboot
+```
+
+If `session.log` shows `pallet-x11-session: No such file or directory`, you need the command above.
+
+**Check after reboot:**
+
+```bash
+sudo tail -30 /var/log/pallet/session.log
+```
+
+You want either `starting labwc` or `starting X11 via startx` — not immediate exit.
+
+---
+
 ## Black screen: DRM device missing
 
 If install or `session.log` says **DRM device missing** or `no /dev/dri/card*`, the GPU driver did not create a display device. labwc cannot draw anything without it.

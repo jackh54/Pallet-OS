@@ -218,6 +218,9 @@ systemctl daemon-reload
 systemctl enable pallet-agent
 systemctl disable pallet-shell 2>/dev/null || true
 
+echo "==> Desktop session (labwc + X11 fallback)"
+bash "$SCRIPT_DIR/fix-desktop-now.sh"
+
 is_enrolled() {
   [[ -f /etc/pallet/agent.json ]] && \
     jq -e '.device_id != "" and .device_token != ""' /etc/pallet/agent.json >/dev/null 2>&1
@@ -247,3 +250,6 @@ fi
 echo ""
 echo "Pallet OS provision complete."
 echo "Reboot to start the desktop: sudo reboot"
+echo ""
+echo "If desktop is black after reboot, run:"
+echo "  sudo $SCRIPT_DIR/fix-desktop-now.sh && sudo reboot"

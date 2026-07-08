@@ -49,5 +49,14 @@ apt-get install -y "linux-modules-extra-${KVER}" 2>/dev/null || true
 install -m 0755 "$SCRIPT_DIR/pallet-graphics-env.sh" /usr/local/bin/pallet-graphics-env
 
 update-initramfs -u 2>/dev/null || true
+
+if lspci 2>/dev/null | grep -qiE 'vga|display.*amd'; then
+  mkdir -p /etc/pallet
+  if [[ ! -f /etc/pallet/force-hardware-rendering ]]; then
+    touch /etc/pallet/force-software-rendering
+    echo "    Default: software rendering for AMD Chromebook (remove /etc/pallet/force-software-rendering to try GPU)"
+  fi
+fi
+
 echo "    GPU diagnostics: dmesg | grep -iE 'amdgpu|i915|drm|gpu|firmware'"
 echo "    Force software desktop: sudo touch /etc/pallet/force-software-rendering && sudo reboot"
