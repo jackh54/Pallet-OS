@@ -76,6 +76,32 @@ mkdir -p "$ROOTFS/etc/systemd/system/multi-user.target.wants"
 ln -sf /etc/systemd/system/pallet-first-boot.service \
   "$ROOTFS/etc/systemd/system/multi-user.target.wants/pallet-first-boot.service"
 
+echo "==> Install kernel + bootloader inside rootfs"
+cp /etc/resolv.conf "$ROOTFS/etc/resolv.conf"
+mount --bind /dev "$ROOTFS/dev"
+mount --bind /dev/pts "$ROOTFS/dev/pts"
+mount --bind /proc "$ROOTFS/proc"
+mount --bind /sys "$ROOTFS/sys"
+chroot_cleanup() {
+  umount "$ROOTFS/sys" 2>/dev/null || true
+  umount "$ROOTFS/proc" 2>/dev/null || true
+  umount "$ROOTFS/dev/pts" 2>/dev/null || true
+  umount "$ROOTFS/dev" 2>/dev/null || true
+}
+trap chroot_cleanup EXIT
+
+chroot "$ROOTFS" apt-get update
+chroot "$ROOTFS" DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  linux-image-generic \
+  linux-firmware \
+  grub-efi-amd64 \
+  shim-signed \
+  network-manager \
+  systemd-sysv \
+  sudo
+chroot_cleanup
+trap - EXIT
+
 echo "==> Create disk image"
 rm -f "$IMAGE" "$IMAGE.zst"
 dd if=/dev/zero of="$IMAGE" bs=1M count="$SIZE_MB" status=none
@@ -99,13 +125,27 @@ mount "${LOOP}p2" "$BUILD/mnt"
 mkdir -p "$BUILD/mnt/boot/efi"
 mount "${LOOP}p1" "$BUILD/mnt/boot/efi"
 rsync -a "$ROOTFS/" "$BUILD/mnt/"
-mkdir -p "$BUILD/mnt/boot/efi/EFI/BOOT"
-grub-install \
+
+ROOT_UUID="$(blkid -s UUID -o value "${LOOP}p2")"
+EFI_UUID="$(blkid -s UUID -o value "${LOOP}p1")"
+cat > "$BUILD/mnt/etc/fstab" <<EOF
+UUID=${ROOT_UUID}  /          ext4  defaults,noatime  0 1
+UUID=${EFI_UUID}  /boot/efi  vfat  umask=0077        0 1
+EOF
+
+mount --bind /dev "$BUILD/mnt/dev"
+mount --bind /dev/pts "$BUILD/mnt/dev/pts"
+mount --bind /proc "$BUILD/mnt/proc"
+mount --bind /sys "$BUILD/mnt/sys"
+chroot "$BUILD/mnt" grub-install \
   --target=x86_64-efi \
-  --efi-directory="$BUILD/mnt/boot/efi" \
-  --boot-directory="$BUILD/mnt/boot" \
+  --efi-directory=/boot/efi \
+  --boot-directory=/boot \
   --removable \
   --no-nvram
+chroot "$BUILD/mnt" update-grub
+umount "$BUILD/mnt/sys" "$BUILD/mnt/proc" "$BUILD/mnt/dev/pts" "$BUILD/mnt/dev"
+
 cleanup
 trap - EXIT
 
