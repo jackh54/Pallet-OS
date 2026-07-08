@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# greetd session — keeps retrying Wayland then X11; never drops to a dead console.
+# greetd session — AMD Chromebooks use X11; Intel tries Wayland then X11.
 set -uo pipefail
 
 PALLET_USER="${PALLET_USER:-pallet}"
@@ -14,6 +14,14 @@ SESSION_LOG="$LOG_DIR/session.log"
 
 log() {
   echo "$(date -Is) [session] $*" >>"$SESSION_LOG"
+}
+
+has_amd_gpu() {
+  lspci -nn 2>/dev/null | grep -qiE 'vga|display.*\[(1002|1022):'
+}
+
+use_amd_x11() {
+  [[ -f /etc/pallet/desktop-mode ]] && grep -q '^amd-x11$' /etc/pallet/desktop-mode
 }
 
 run_wayland() {
@@ -39,6 +47,13 @@ run_wayland() {
   return 0
 }
 
+cleanup_x11() {
+  pkill -u "$PALLET_USER" -x Xorg 2>/dev/null || true
+  pkill -u "$PALLET_USER" labwc 2>/dev/null || true
+  rm -f /tmp/.X0-lock 2>/dev/null || true
+  rm -f /tmp/.X11-unix/X0 2>/dev/null || true
+}
+
 run_x11() {
   export XDG_SESSION_TYPE=x11
   export GDK_BACKEND=x11
@@ -50,22 +65,32 @@ run_x11() {
     return 1
   fi
 
+  cleanup_x11
+  modprobe amdgpu 2>/dev/null || true
+
   log "starting X11 via startx"
   startx "$x11_cmd" -- :0 vt1 -keeptty -nolisten tcp >>"$SESSION_LOG" 2>&1
   log "X11 exited with $?"
+  cleanup_x11
   return 0
 }
 
 exec >>"$SESSION_LOG" 2>&1
 log "pallet-session boot (uid=$(id -u), groups=$(id -Gn))"
 
+if has_amd_gpu || use_amd_x11; then
+  log "AMD Chromebook — using X11 desktop path"
+  while true; do
+    run_x11 || true
+    log "X11 retry in 5s"
+    sleep 5
+  done
+fi
+
 while true; do
-  if run_wayland; then
-    log "wayland session ended, trying X11"
-  fi
-  if run_x11; then
-    log "x11 session ended, retrying"
-  fi
+  run_wayland || true
+  log "wayland ended, trying X11"
+  run_x11 || true
   log "both sessions failed — retry in 5s"
   sleep 5
 done

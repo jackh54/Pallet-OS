@@ -20,8 +20,14 @@ echo "==> X11 + seat packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get install -y \
   xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
-  x11-xserver-xorg-input-all 2>/dev/null || \
-apt-get install -y xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all
+  xserver-xorg-video-amdgpu xserver-xorg-legacy \
+  2>/dev/null || \
+apt-get install -y \
+  xserver-xorg-core xinit x11-xserver-utils xserver-xorg-video-all \
+  xserver-xorg-video-amdgpu
+
+install -m 0644 "$SCRIPT_DIR/xorg/Xwrapper.config" /etc/X11/Xwrapper.config
+install -m 0644 "$SCRIPT_DIR/xorg/20-amdgpu.conf" /etc/X11/xorg.conf.d/20-amdgpu.conf
 
 bash "$SCRIPT_DIR/greetd-seat.sh" || true
 bash "$SCRIPT_DIR/chromebook-graphics.sh" || true
@@ -33,19 +39,16 @@ install -m 0644 "$SCRIPT_DIR/labwc/rc.xml" /home/$PALLET_USER/.config/labwc/rc.x
 chown -R "$PALLET_USER:$PALLET_USER" /home/$PALLET_USER/.config
 chown "$PALLET_USER:$PALLET_USER" /var/log/pallet
 
-# X11 entry for startx
 install -m 0755 /dev/stdin "/home/$PALLET_USER/.xinitrc" <<'EOF'
 #!/bin/sh
 exec /usr/local/bin/pallet-x11-session
 EOF
 chown "$PALLET_USER:$PALLET_USER" "/home/$PALLET_USER/.xinitrc"
 
-# AMD Chromebooks: software rendering is the reliable default.
-if lspci 2>/dev/null | grep -qiE 'vga|display.*amd'; then
-  if [[ ! -f /etc/pallet/force-hardware-rendering ]]; then
-    touch /etc/pallet/force-software-rendering
-    echo "    Enabled software rendering for AMD Chromebook"
-  fi
+if lspci -nn 2>/dev/null | grep -qiE 'vga|display.*\[(1002|1022):'; then
+  echo "amd-x11" > /etc/pallet/desktop-mode
+  touch /etc/pallet/force-software-rendering
+  echo "    AMD Chromebook: using X11 desktop (skipping labwc)"
 fi
 
 echo "==> Verify installed desktop files"
