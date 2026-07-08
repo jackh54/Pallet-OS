@@ -76,6 +76,9 @@ echo "==> Chromebook hardware support"
 if [[ -f "$SCRIPT_DIR/chromebook-graphics.sh" ]]; then
   bash "$SCRIPT_DIR/chromebook-graphics.sh" || true
 fi
+if [[ -f "$SCRIPT_DIR/chromebook-audio.sh" ]]; then
+  bash "$SCRIPT_DIR/chromebook-audio.sh" || true
+fi
 if [[ -f "$SCRIPT_DIR/chromebook-modules.sh" ]]; then
   bash "$SCRIPT_DIR/chromebook-modules.sh" || true
 fi

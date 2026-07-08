@@ -125,6 +125,31 @@ sudo reboot
 
 ---
 
+## AMD audio errors (acp3x-alc5682-max98357 / DMIC gpio err=-2)
+
+These messages are **audio/microphone only** — they do **not** cause the black screen:
+
+```
+acp3x-alc5682-max98357 AMDI5682:00: DMIC gpio failed err=-2
+acp3x-alc5682-max98357: probe with driver ... failed with error -2
+```
+
+The internal mic GPIO is missing under Linux on many AMD Chromebooks. **Speakers can still work.**
+
+```bash
+cd ~/Pallet-OS && git pull
+sudo ./provision/install-pallet-os.sh
+sudo reboot
+```
+
+For black screen on AMD Chromebooks, force software rendering:
+
+```bash
+sudo touch /etc/pallet/force-software-rendering && sudo reboot
+```
+
+---
+
 ## Black screen + brief driver error (i915 / drm / firmware)
 
 If you see a flash of text mentioning **i915**, **drm**, **firmware**, or **gpu** then a black screen, the Intel GPU driver failed. Force CPU rendering:

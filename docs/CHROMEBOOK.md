@@ -61,7 +61,9 @@ sudo ./provision/install-pallet-os.sh && sudo reboot
 
 ## Hardware notes
 
-- **Wi‑Fi / touchpad**: Ubuntu 24.04 includes most Intel Chromebook drivers. Some models need `linux-firmware` updates or model-specific quirks.
+- **AMD Chromebooks (Picasso / Ryzen 3xxx)**: Audio codec `acp3x-alc5682-max98357`. Boot logs like `DMIC gpio failed err=-2` are **internal microphone only** — annoying but **do not cause a black screen**. Speakers are fixed via ALSA UCM profile (provisioner applies this automatically).
+- **Display**: AMD models use `amdgpu` (not Intel `i915`). If the screen is black, use `sudo touch /etc/pallet/force-software-rendering && sudo reboot`.
+- **Wi‑Fi / touchpad**: Ubuntu 24.04 includes most Intel/AMD Chromebook drivers. Some models need `linux-firmware` updates or model-specific quirks.
 - **Android (Waydroid)**: Requires `binder_linux` and `ashmem` kernel modules — provisioner loads these when available.
 - **Battery / ACPI**: Exposed via standard Linux power_supply; shell reads `/sys/class/power_supply`.
 
