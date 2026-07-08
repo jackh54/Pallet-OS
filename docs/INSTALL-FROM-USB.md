@@ -125,6 +125,37 @@ sudo reboot
 
 ---
 
+## Black screen: Permission denied on /dev/dri/card0 (AMD)
+
+If `session.log` shows:
+
+```
+Failed to open DRM node '/dev/dri/card0': Permission denied
+Failed to initialize EGL context
+graphics mode: hardware
+```
+
+The GPU driver loaded (`amdgpu` in dmesg is fine) but **greetd did not hand GPU access to labwc**.
+
+**Immediate fix:**
+
+```bash
+sudo usermod -aG seat,render,video,input pallet
+sudo mkdir -p /etc/pallet
+sudo touch /etc/pallet/force-software-rendering
+sudo reboot
+```
+
+**Full fix:**
+
+```bash
+cd ~/Pallet-OS && git pull
+sudo ./provision/install-pallet-os.sh
+sudo reboot
+```
+
+---
+
 ## Black screen + brief driver error (i915 / drm / firmware)
 
 If you see a flash of text mentioning **i915**, **drm**, **firmware**, or **gpu** then a black screen, the Intel GPU driver failed. Force CPU rendering:

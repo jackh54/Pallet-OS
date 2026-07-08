@@ -12,6 +12,7 @@ export XDG_SESSION_TYPE=wayland
 export XDG_CURRENT_DESKTOP=PalletOS
 export MOZ_ENABLE_WAYLAND=1
 export GDK_BACKEND=wayland
+export LIBSEAT_BACKEND=seatd
 
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
@@ -19,10 +20,10 @@ chmod 700 "$XDG_RUNTIME_DIR"
 LOG_DIR="/var/log/pallet"
 mkdir -p "$LOG_DIR"
 exec >>"$LOG_DIR/session.log" 2>&1
-echo "$(date -Is) pallet-session starting (uid=$(id -u), wayland=${WAYLAND_DISPLAY:-unset})"
+echo "$(date -Is) pallet-session starting (uid=$(id -u), wayland=${WAYLAND_DISPLAY:-unset}, groups=$(id -Gn))"
 
 # shellcheck disable=SC1091
 source /usr/local/bin/pallet-graphics-env
-echo "$(date -Is) graphics mode: ${PALLET_SOFTWARE_RENDERING:+software}${PALLET_SOFTWARE_RENDERING:-hardware}"
+echo "$(date -Is) graphics mode: ${PALLET_SOFTWARE_RENDERING:+software}${PALLET_SOFTWARE_RENDERING:-hardware} seatd=${LIBSEAT_BACKEND:-unset}"
 
 exec dbus-run-session -- /usr/bin/labwc -c "$PALLET_HOME/.config/labwc/rc.xml"
